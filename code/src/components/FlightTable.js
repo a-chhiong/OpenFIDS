@@ -22,12 +22,12 @@ export class FlightTable extends LitElement {
 
   // Portrait mode: tighter spacing to prevent excessive horizontal scroll on vertical screens
   static COL_WIDTHS_PORTRAIT = {
-    flight: 100,
-    dest: 160,
+    flight: 110,
+    dest: 150,
     time: 85,
-    gate: 55,
-    counter: 55,
-    status: 160,
+    gate: 60,
+    counter: 60,
+    status: 200,
   };
 
   static styles = css`
