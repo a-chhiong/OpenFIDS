@@ -1,0 +1,17 @@
+{
+  "name": "fos-fids",
+  "version": "1.0.0",
+  "description": "FOS FIDS Web App",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^6.4.2"
+  },
+  "dependencies": {
+    "lit": "^3.3.3"
+  }
+}
