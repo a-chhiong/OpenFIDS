@@ -12,22 +12,24 @@ export class FlightTable extends LitElement {
 
   // Landscape mode: generous spacing, especially for status
   static COL_WIDTHS_LANDSCAPE = {
-    flight: 110,
+    airline: 80,
+    flight: 90,
     dest: 200,
     time: 85,
     gate: 60,
     counter: 60,
-    status: 300,
+    status: 240,
   };
 
   // Portrait mode: tighter spacing to prevent excessive horizontal scroll on vertical screens
   static COL_WIDTHS_PORTRAIT = {
-    flight: 110,
+    airline: 70,
+    flight: 80,
     dest: 150,
     time: 85,
     gate: 60,
     counter: 60,
-    status: 200,
+    status: 160,
   };
 
   static styles = css`
@@ -55,7 +57,7 @@ export class FlightTable extends LitElement {
 
     table {
       border-collapse: separate;
-      border-spacing: 0;
+      border-spacing: 0 0.5rem;
       table-layout: fixed;
       /* min-width set inline from COL_WIDTHS sum so it can reference the JS value */
     }
@@ -77,6 +79,7 @@ export class FlightTable extends LitElement {
       text-transform: uppercase;
       letter-spacing: 0.06em;
       white-space: nowrap;
+      border-bottom: none;
     }
 
     td {
@@ -161,6 +164,7 @@ export class FlightTable extends LitElement {
     const scale = window.innerWidth >= 2500 ? 2.2 : 
                   window.innerWidth >= 1440 ? 1.3 : 1.0;
     return {
+      airline: Math.round(base.airline * scale),
       flight: Math.round(base.flight * scale),
       dest: Math.round(base.dest * scale),
       time: Math.round(base.time * scale),
@@ -173,12 +177,13 @@ export class FlightTable extends LitElement {
   render() {
     const rh = this.rowHeight || 64;
     const cw = this._getColWidths();
-    const minW = cw.flight + cw.dest + cw.time + cw.gate + cw.counter + cw.status;
+    const minW = cw.airline + cw.flight + cw.dest + cw.time + cw.gate + cw.counter + cw.status;
 
     return html`
       <div class="table-scroll-area">
         <table style=${styleMap({ width: `max(100%, ${minW}px)`, minWidth: `${minW}px` })}>
           <colgroup>
+            <col style=${styleMap({ width: `${cw.airline}px` })}>
             <col style=${styleMap({ width: `${cw.flight}px` })}>
             <col style=${styleMap({ width: `${cw.dest}px` })}>
             <col style=${styleMap({ width: `${cw.time}px` })}>
@@ -188,9 +193,10 @@ export class FlightTable extends LitElement {
           </colgroup>
           <thead>
             <tr>
-              <th>Flight</th>
+              <th>Airline</th>
+              <th style="padding-left: 0;">Flight</th>
               <th>${this.isDeparture ? 'To' : 'From'}</th>
-              <th>Time</th>
+              <th style="text-align: center; padding-left: 0; padding-right: 0;">Time</th>
               <th style="text-align: center; padding-left: 0; padding-right: 0;">Gate</th>
               <th style="text-align: center; padding-left: 0; padding-right: 0;">${this.isDeparture ? 'Counter' : 'Baggage'}</th>
               <th>Status</th>
@@ -198,7 +204,7 @@ export class FlightTable extends LitElement {
           </thead>
           <tbody>
             ${this.flights.length === 0
-        ? html`<tr><td colspan="6" style="text-align:center;color:var(--fids-dim);padding:2rem;">No flights found</td></tr>`
+        ? html`<tr><td colspan="7" style="text-align:center;color:var(--fids-dim);padding:2rem;">No flights found</td></tr>`
         : this.flights.map(f => html`
                   <flight-table-row
                     .flight=${f}

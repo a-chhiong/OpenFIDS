@@ -74,27 +74,45 @@ export class FlightTableRow extends LitElement {
 
     return html`
       <style>
-        .fids-cell { box-sizing: border-box; padding: 0 0.75rem; vertical-align: middle; }
+        /* Base Landscape (Modernized) */
+        tr {
+          background: rgba(255, 255, 255, 0.03);
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          border-radius: 8px;
+          transition: background 0.2s ease;
+        }
+        tr:hover {
+          background: rgba(255, 255, 255, 0.06);
+        }
+        .fids-cell { box-sizing: border-box; padding: 0 0.75rem; vertical-align: middle; border: none !important; }
+        .fids-cell:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
+        .fids-cell:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
+        
         .truncate { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
         .time-cell { font-variant-numeric: tabular-nums; letter-spacing: 0.5px; }
       </style>
 
       <tr class="${this.isRefreshing ? 'refreshing-row' : ''}" style=${rowStyles}>
 
-        <td class="fids-cell" style=${cellStyles}>
-          <div class="truncate" style="font-weight:700; font-size:var(--fids-row-font-main, 0.95rem); letter-spacing:0.5px; line-height:1.1;">
-            ${f.fullFlightNumber || '--'}
-          </div>
-          <div class="truncate" style="display:flex; align-items:center; font-size:var(--fids-row-font-sub, 0.68rem); color:var(--fids-dim); margin-top:0.1em; line-height:1.1;">
+        <td class="fids-cell" style="padding-right:0.25rem; ${cellStyles}">
+          <div style="display:flex; flex-direction:column; justify-content:center; height:100%;">
             ${logoUrl ? html`
               <img 
                 src="${logoUrl}" 
                 alt="${f.airlineCode}" 
                 @error="${(e) => e.target.style.display = 'none'}"
-                style="height: var(--fids-logo-height, 1.4em); width: auto; max-width: 2.2em; object-fit: contain; margin-right: 0.35rem; border-radius: 2px; flex-shrink: 0;"
+                style="height: var(--fids-logo-height, 1.6em); width: auto; max-width: 2.8em; object-fit: contain; border-radius: 2px; margin-bottom: 0.25rem;"
               />
             ` : ''}
-            <span>${f.airlineNameZH || ''}</span>
+            <div class="truncate" style="font-size:var(--fids-row-font-sub, 0.72rem); color:var(--fids-dim); line-height:1.1; font-weight:600;">
+              ${f.airlineNameZH || ''}
+            </div>
+          </div>
+        </td>
+
+        <td class="fids-cell" style="padding-left:0; ${cellStyles}">
+          <div class="truncate" style="font-weight:700; font-size:var(--fids-row-font-main, 0.95rem); letter-spacing:0.5px; line-height:1.1;">
+            ${f.fullFlightNumber || '--'}
           </div>
         </td>
 
@@ -107,7 +125,7 @@ export class FlightTableRow extends LitElement {
           </div>
         </td>
 
-        <td class="fids-cell time-cell" style=${cellStyles}>
+        <td class="fids-cell time-cell" style="text-align: center; padding-left: 0; padding-right: 0; ${cellStyles}">
           <div class="truncate" style="font-weight:700; font-size:var(--fids-row-font-main, 0.95rem); line-height:1.1;">
             ${f.scheduledTime?.substring(0, 5) || '--'}
             ${dayOffset !== 0 ? html`

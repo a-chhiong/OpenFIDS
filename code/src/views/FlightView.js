@@ -71,9 +71,11 @@ export class FlightView extends LitElement {
       // Fallback before first measurement: use 65% of viewport
       return Math.max(this.minRowsPerPage, Math.min(currentMaxRows, Math.floor((window.innerHeight * 0.65) / minRH)));
     }
-    // Use floor — but the adjusted row height will stretch rows to fill the gap,
-    // so we never under-count (rows * adjustedRH == bodyHeight exactly).
-    const possible = Math.max(this.minRowsPerPage, Math.floor(bodyHeight / minRH));
+    
+    // Account for border-spacing: 0 0.5rem (approx 8px) added for modern layout.
+    // N rows will have N+1 gaps. bodyHeight - gap >= rows * (minRH + gap)
+    const gap = 8;
+    const possible = Math.max(this.minRowsPerPage, Math.floor((bodyHeight - gap) / (minRH + gap)));
     return Math.min(currentMaxRows, possible);
   }
 
@@ -88,8 +90,11 @@ export class FlightView extends LitElement {
     if (rows <= 0 || this._tableBodyHeight <= 0) return minRH;
     
     // We explicitly floor the body height to ignore fractional sub-pixels from getBoundingClientRect.
-    // Then we subtract a small safety buffer (2px) to guarantee no row borders/padding cause clipping.
-    const safeBodyHeight = Math.floor(this._tableBodyHeight) - 2;
+    // Then we subtract a small safety buffer (2px) plus the total height of all row gaps (border-spacing).
+    const gap = 8;
+    const totalGapsHeight = (rows + 1) * gap;
+    const safeBodyHeight = Math.floor(this._tableBodyHeight) - totalGapsHeight - 2;
+    
     return Math.max(minRH, Math.floor(safeBodyHeight / rows));
   }
 
