@@ -15,6 +15,8 @@ export class FlightTableRow extends LitElement {
   // We use inline styles or expect global CSS for status classes.
   createRenderRoot() { return this; }
 
+
+
   /** * Helpers to keep render() clean 
    */
   _getStatusClass(status) {
@@ -72,7 +74,7 @@ export class FlightTableRow extends LitElement {
 
     return html`
       <style>
-        .fids-cell { padding: 0 0.75rem; vertical-align: middle; }
+        .fids-cell { box-sizing: border-box; padding: 0 0.75rem; vertical-align: middle; }
         .truncate { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
         .time-cell { font-variant-numeric: tabular-nums; letter-spacing: 0.5px; }
       </style>
@@ -101,10 +103,7 @@ export class FlightTableRow extends LitElement {
             ${this.isDeparture ? (f.destinationIATA || '--') : (f.originIATA || '--')}
           </div>
           <div class="truncate" style="font-size:var(--fids-row-font-city-en, 0.78rem); color:var(--fids-dim); margin-top:1px;">
-            ${this.isDeparture ? f.destinationEN : f.originEN}
-          </div>
-          <div class="truncate" style="font-size:var(--fids-row-font-sub, 0.68rem); color:var(--fids-dim);">
-            ${this.isDeparture ? f.destinationZH : f.originZH}
+            ${this.isDeparture ? `${f.destinationZH || ''} ${f.destinationEN || ''}` : `${f.originZH || ''} ${f.originEN || ''}`}
           </div>
         </td>
 
@@ -134,9 +133,7 @@ export class FlightTableRow extends LitElement {
 
         <td class="fids-cell" style=${cellStyles}>
           <div style="display:flex; align-items:center; height:100%; overflow:hidden;">
-            <span class="status-badge truncate ${this._getStatusClass(displayStatus)}">
-              ${displayStatus || '--'}
-            </span>
+            <flight-marquee text="${displayStatus}" statusClass="${this._getStatusClass(displayStatus)}"></flight-marquee>
           </div>
         </td>
 

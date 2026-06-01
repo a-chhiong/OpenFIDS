@@ -10,21 +10,25 @@ export class FlightTable extends LitElement {
     rowHeight: { type: Number }
   };
 
-  // Column widths in px (absolute, for reliable mobile horizontal scroll)
-  // Status gets the most space so its content is never truncated unnecessarily.
-  static COL_WIDTHS = {
-    flight: 130,  // flight no. + airline
-    dest: 175,  // IATA + EN + ZH city name
-    time: 90,  // HH:MM + EST tag
-    gate: 60,  // gate code
-    counter: 60,  // check-in counter / baggage carousel
-    status: 300,  // status badge — most generous column
+  // Landscape mode: generous spacing, especially for status
+  static COL_WIDTHS_LANDSCAPE = {
+    flight: 110,
+    dest: 200,
+    time: 85,
+    gate: 60,
+    counter: 60,
+    status: 300,
   };
 
-  static get TABLE_MIN_WIDTH() {
-    const w = FlightTable.COL_WIDTHS;
-    return w.flight + w.dest + w.time + w.gate + w.counter + w.status;
-  }
+  // Portrait mode: tighter spacing to prevent excessive horizontal scroll on vertical screens
+  static COL_WIDTHS_PORTRAIT = {
+    flight: 100,
+    dest: 160,
+    time: 85,
+    gate: 55,
+    counter: 55,
+    status: 160,
+  };
 
   static styles = css`
     :host {
@@ -50,7 +54,8 @@ export class FlightTable extends LitElement {
     }
 
     table {
-      border-collapse: collapse;
+      border-collapse: separate;
+      border-spacing: 0;
       table-layout: fixed;
       /* min-width set inline from COL_WIDTHS sum so it can reference the JS value */
     }
@@ -65,6 +70,7 @@ export class FlightTable extends LitElement {
     }
 
     th {
+      box-sizing: border-box;
       padding: var(--fids-table-th-padding, 0.5rem 0.75rem);
       text-align: left;
       font-size: var(--fids-header-font-size, 0.75rem);
@@ -74,6 +80,7 @@ export class FlightTable extends LitElement {
     }
 
     td {
+      box-sizing: border-box;
       padding: 0 0.75rem;
       border-bottom: 1px solid var(--fids-separator);
       overflow: hidden;
@@ -83,23 +90,7 @@ export class FlightTable extends LitElement {
 
     flight-table-row { display: contents; }
 
-    /* Status badge styles — shared with FlightTableRow light DOM */
-    .status-badge {
-      display: inline-block;
-      padding: var(--fids-row-badge-padding, 0.25rem 0.55rem);
-      border-radius: 5px;
-      font-size: var(--fids-row-font-badge, 0.72rem);
-      font-weight: 700;
-      letter-spacing: 0.3px;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      max-width: 100%;
-    }
-    .status-ontime    { color: var(--fids-success, #10b981); background: rgba(16,185,129,0.15); }
-    .status-delayed   { color: var(--fids-warning, #f59e0b); background: rgba(245,158,11,0.15); }
-    .status-cancelled { color: var(--fids-danger, #ef4444);  background: rgba(239,68,68,0.15); text-decoration: line-through; }
-    .status-estimated { color: var(--fids-text, #ffffff);    background: rgba(255,255,255,0.1); }
+
 
     .refreshing-row { animation: row-flash 0.5s ease-in-out; }
     @keyframes row-flash { 0% { background: rgba(59,130,246,0.15); } 100% { background: transparent; } }
@@ -129,6 +120,7 @@ export class FlightTable extends LitElement {
     super.connectedCallback();
     window.addEventListener('hashchange', this._handleHashChange);
     window.addEventListener('popstate', this._handleHashChange);
+    window.addEventListener('resize', this._handleResize);
     this._handleHashChange();
   }
 
@@ -136,7 +128,13 @@ export class FlightTable extends LitElement {
     super.disconnectedCallback();
     window.removeEventListener('hashchange', this._handleHashChange);
     window.removeEventListener('popstate', this._handleHashChange);
+    window.removeEventListener('resize', this._handleResize);
   }
+
+  _handleResize = () => {
+    // Force re-render when viewport aspect ratio or scale might change
+    this.requestUpdate();
+  };
 
   _handleHashChange = () => {
     this.isDeparture = !window.location.hash.toLowerCase().includes('arrival');
@@ -152,11 +150,15 @@ export class FlightTable extends LitElement {
   }
 
   _getColWidths() {
-    const base = FlightTable.COL_WIDTHS;
     if (typeof window === 'undefined') {
-      return base;
+      return FlightTable.COL_WIDTHS_LANDSCAPE;
     }
-    const scale = window.innerWidth >= 2500 ? 2.2 : window.innerWidth >= 1200 ? 1.5 : 1.0;
+    
+    // Choose base based on aspect ratio
+    const isPortrait = window.innerHeight > window.innerWidth;
+    const base = isPortrait ? FlightTable.COL_WIDTHS_PORTRAIT : FlightTable.COL_WIDTHS_LANDSCAPE;
+
+    const scale = window.innerWidth >= 2500 ? 2.2 : window.innerWidth >= 1440 ? 1.3 : 1.0;
     return {
       flight: Math.round(base.flight * scale),
       dest: Math.round(base.dest * scale),

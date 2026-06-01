@@ -202,7 +202,7 @@ export class FlightPagination extends LitElement {
       .divider { margin: 0 0.1rem; }
     }
 
-    @media (min-width: 1200px) {
+    @media (min-width: 1440px) {
       .pagination-bar {
         font-size: 0.85rem;
         padding: 0.25rem 0.5rem;

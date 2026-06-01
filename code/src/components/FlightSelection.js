@@ -147,7 +147,7 @@ export class FlightSelection extends LitElement {
     }
 
     /* Media Queries for Android TV scaling */
-    @media (min-width: 1200px) {
+    @media (min-width: 1440px) {
       .config-row {
         padding: 0.75rem 1rem;
       }

@@ -7,6 +7,7 @@ import './components/FlightAlert.js';
 import './components/FlightSelection.js';
 import './components/FlightPagination.js';
 import './components/FlightHeader.js';
+import './components/FlightMarquee.js';
 
 window.addEventListener('DOMContentLoaded', () => {
   document.body.classList.add('loaded');

@@ -133,22 +133,22 @@ export class FlightHeader extends LitElement {
       100% { transform: rotate(360deg); }
     }
 
-    @media (min-width: 1200px) {
+    @media (min-width: 1440px) {
       header {
         padding: 1.25rem 1rem;
         border-bottom: 3px solid var(--fids-accent, #ffcc00);
       }
       h1 {
-        font-size: 2.5rem;
+        font-size: 2.2rem;
       }
       .clock-date {
-        font-size: 1.1rem;
+        font-size: 0.95rem;
       }
       .clock-time {
-        font-size: 1.6rem;
+        font-size: 1.35rem;
       }
       .refreshing-spinner {
-        font-size: 1.8rem;
+        font-size: 1.5rem;
       }
     }
 

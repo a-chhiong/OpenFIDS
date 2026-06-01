@@ -34,7 +34,7 @@ export class FlightView extends LitElement {
   _getMinRowHeight() {
     if (typeof window === 'undefined') return 64;
     if (window.innerWidth >= 2500) return 140; // 4K resolution TV
-    if (window.innerWidth >= 1200) return 96;  // 2K resolution TV
+    if (window.innerWidth >= 1440) return 72;  // Changed from 96 to 72 to fit >=10 rows on 1080p
     return 64; // default / mobile
   }
 
@@ -82,10 +82,10 @@ export class FlightView extends LitElement {
     const rows = this._getRowsPerPage();
     const minRH = this._getMinRowHeight();
     if (rows <= 0 || this._tableBodyHeight <= 0) return minRH;
-    // Floor the per-row height and subtract a 1px safety buffer before dividing.
-    // This ensures rows * height always fits inside the body with no overflow,
-    // preventing the last row from being clipped by FlightPagination.
-    const safeBodyHeight = this._tableBodyHeight - 1;
+    
+    // We explicitly floor the body height to ignore fractional sub-pixels from getBoundingClientRect.
+    // Then we subtract a small safety buffer (2px) to guarantee no row borders/padding cause clipping.
+    const safeBodyHeight = Math.floor(this._tableBodyHeight) - 2;
     return Math.max(minRH, Math.floor(safeBodyHeight / rows));
   }
 
@@ -287,18 +287,18 @@ export class FlightView extends LitElement {
     }
 
     /* Media Queries for Android TV 2K and 4K scaling */
-    @media (min-width: 1200px) {
+    @media (min-width: 1440px) {
       :host {
-        --fids-row-font-main: 1.5rem;
-        --fids-row-font-sub: 1.1rem;
-        --fids-row-font-city-en: 1.25rem;
-        --fids-row-font-gate: 1.4rem;
-        --fids-row-font-counter: 1.35rem;
-        --fids-row-font-badge: 1.15rem;
-        --fids-row-badge-padding: 0.4rem 0.8rem;
-        --fids-header-font-size: 1.2rem;
-        --fids-table-th-padding: 0.9rem 1.1rem;
-        --fids-logo-height: 2.2em;
+        --fids-row-font-main: 1.3rem;
+        --fids-row-font-sub: 0.95rem;
+        --fids-row-font-city-en: 1.1rem;
+        --fids-row-font-gate: 1.2rem;
+        --fids-row-font-counter: 1.15rem;
+        --fids-row-font-badge: 1.0rem;
+        --fids-row-badge-padding: 0.35rem 0.7rem;
+        --fids-header-font-size: 1.0rem;
+        --fids-table-th-padding: 0.7rem 0.9rem;
+        --fids-logo-height: 1.9em;
       }
       .app-container {
         max-width: 100%;
