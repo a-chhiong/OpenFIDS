@@ -94,25 +94,25 @@ export class FlightTableRow extends LitElement {
 
       <tr class="${this.isRefreshing ? 'refreshing-row' : ''}" style=${rowStyles}>
 
-        <td class="fids-cell" style="padding-right:0.25rem; ${cellStyles}">
-          <div style="display:flex; flex-direction:column; justify-content:center; height:100%;">
+        <td class="fids-cell" style=${cellStyles}>
+          <div style="display:flex; align-items:center; height:100%;">
             ${logoUrl ? html`
               <img 
                 src="${logoUrl}" 
                 alt="${f.airlineCode}" 
                 @error="${(e) => e.target.style.display = 'none'}"
-                style="height: var(--fids-logo-height, 1.6em); width: auto; max-width: 2.8em; object-fit: contain; border-radius: 2px; margin-bottom: 0.25rem;"
+                style="height: var(--fids-logo-height, 1.6em); width: auto; max-width: 2.8em; object-fit: contain; border-radius: 2px;"
               />
             ` : ''}
-            <div class="truncate" style="font-size:var(--fids-row-font-sub, 0.72rem); color:var(--fids-dim); line-height:1.1; font-weight:600;">
-              ${f.airlineNameZH || ''}
-            </div>
           </div>
         </td>
 
-        <td class="fids-cell" style="padding-left:0; ${cellStyles}">
+        <td class="fids-cell" style=${cellStyles}>
           <div class="truncate" style="font-weight:700; font-size:var(--fids-row-font-main, 0.95rem); letter-spacing:0.5px; line-height:1.1;">
             ${f.fullFlightNumber || '--'}
+          </div>
+          <div class="truncate" style="font-size:var(--fids-row-font-sub, 0.72rem); color:var(--fids-dim); margin-top:0.1em; line-height:1.1; font-weight:600;">
+            ${f.airlineNameZH || ''}
           </div>
         </td>
 
