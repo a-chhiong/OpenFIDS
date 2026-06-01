@@ -12,9 +12,9 @@ export class FlightTable extends LitElement {
 
   // Landscape mode: generous spacing, especially for status
   static COL_WIDTHS_LANDSCAPE = {
-    airline: 80,
-    flight: 90,
-    dest: 200,
+    airline: 90,
+    flight: 85,
+    dest: 195,
     time: 85,
     gate: 60,
     counter: 60,
@@ -23,13 +23,13 @@ export class FlightTable extends LitElement {
 
   // Portrait mode: tighter spacing to prevent excessive horizontal scroll on vertical screens
   static COL_WIDTHS_PORTRAIT = {
-    airline: 70,
-    flight: 80,
-    dest: 150,
+    airline: 80,
+    flight: 90,
+    dest: 160,
     time: 85,
     gate: 60,
     counter: 60,
-    status: 160,
+    status: 180,
   };
 
   static styles = css`
