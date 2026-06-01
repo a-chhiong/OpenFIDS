@@ -82,10 +82,10 @@ export class FlightTableRow extends LitElement {
       <tr class="${this.isRefreshing ? 'refreshing-row' : ''}" style=${rowStyles}>
 
         <td class="fids-cell" style=${cellStyles}>
-          <div class="truncate" style="font-weight:700; font-size:var(--fids-row-font-main, 0.95rem); letter-spacing:0.5px;">
+          <div class="truncate" style="font-weight:700; font-size:var(--fids-row-font-main, 0.95rem); letter-spacing:0.5px; line-height:1.1;">
             ${f.fullFlightNumber || '--'}
           </div>
-          <div class="truncate" style="display:flex; align-items:center; font-size:var(--fids-row-font-sub, 0.68rem); color:var(--fids-dim); margin-top:2px;">
+          <div class="truncate" style="display:flex; align-items:center; font-size:var(--fids-row-font-sub, 0.68rem); color:var(--fids-dim); margin-top:0.1em; line-height:1.1;">
             ${logoUrl ? html`
               <img 
                 src="${logoUrl}" 
@@ -99,16 +99,16 @@ export class FlightTableRow extends LitElement {
         </td>
 
         <td class="fids-cell" style=${cellStyles}>
-          <div class="truncate" style="font-weight:700; font-size:var(--fids-row-font-main, 0.95rem);">
+          <div class="truncate" style="font-weight:700; font-size:var(--fids-row-font-main, 0.95rem); line-height:1.1;">
             ${this.isDeparture ? (f.destinationIATA || '--') : (f.originIATA || '--')}
           </div>
-          <div class="truncate" style="font-size:var(--fids-row-font-city-en, 0.78rem); color:var(--fids-dim); margin-top:1px;">
+          <div class="truncate" style="font-size:var(--fids-row-font-city-en, 0.78rem); color:var(--fids-dim); margin-top:0.1em; line-height:1.1;">
             ${this.isDeparture ? `${f.destinationZH || ''} ${f.destinationEN || ''}` : `${f.originZH || ''} ${f.originEN || ''}`}
           </div>
         </td>
 
         <td class="fids-cell time-cell" style=${cellStyles}>
-          <div class="truncate" style="font-weight:700; font-size:var(--fids-row-font-main, 0.95rem);">
+          <div class="truncate" style="font-weight:700; font-size:var(--fids-row-font-main, 0.95rem); line-height:1.1;">
             ${f.scheduledTime?.substring(0, 5) || '--'}
             ${dayOffset !== 0 ? html`
               <sup style="font-size:0.6rem; font-weight:800; color:${dayBadgeColor};">
@@ -116,7 +116,7 @@ export class FlightTableRow extends LitElement {
               </sup>` : ''}
           </div>
           ${f.estimatedTime && f.estimatedTime !== f.scheduledTime ? html`
-            <div class="truncate" style="font-size:var(--fids-row-font-sub, 0.68rem); color:#e34234; margin-top:1px;">
+            <div class="truncate" style="font-size:var(--fids-row-font-sub, 0.68rem); color:#e34234; margin-top:0.1em; line-height:1.1;">
               EST ${f.estimatedTime.substring(0, 5)}
             </div>` : ''}
         </td>

@@ -158,7 +158,8 @@ export class FlightTable extends LitElement {
     const isPortrait = window.innerHeight > window.innerWidth;
     const base = isPortrait ? FlightTable.COL_WIDTHS_PORTRAIT : FlightTable.COL_WIDTHS_LANDSCAPE;
 
-    const scale = window.innerWidth >= 2500 ? 2.2 : window.innerWidth >= 1440 ? 1.3 : 1.0;
+    const scale = window.innerWidth >= 2500 ? 2.2 : 
+                  window.innerWidth >= 1440 ? 1.3 : 1.0;
     return {
       flight: Math.round(base.flight * scale),
       dest: Math.round(base.dest * scale),

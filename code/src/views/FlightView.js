@@ -33,8 +33,8 @@ export class FlightView extends LitElement {
 
   _getMinRowHeight() {
     if (typeof window === 'undefined') return 64;
-    if (window.innerWidth >= 2500) return 140; // 4K resolution TV
-    if (window.innerWidth >= 1440) return 72;  // Changed from 96 to 72 to fit >=10 rows on 1080p
+    if (window.innerWidth >= 2500) return 140; // 2K and 4K resolution TVs
+    if (window.innerWidth >= 1440) return 72;  // Small Desktop / 1080p
     return 64; // default / mobile
   }
 
@@ -63,14 +63,18 @@ export class FlightView extends LitElement {
     if (typeof window === 'undefined') return 10;
     const minRH = this._getMinRowHeight();
     const bodyHeight = this._tableBodyHeight || 0;
+    
+    // Cap max rows to 10 on TVs (1080p, 2K, 4K) to improve readability and avoid crowding
+    const currentMaxRows = window.innerWidth >= 1440 ? 10 : this.maxRowsPerPage;
+    
     if (bodyHeight <= 0) {
       // Fallback before first measurement: use 65% of viewport
-      return Math.max(this.minRowsPerPage, Math.floor((window.innerHeight * 0.65) / minRH));
+      return Math.max(this.minRowsPerPage, Math.min(currentMaxRows, Math.floor((window.innerHeight * 0.65) / minRH)));
     }
     // Use floor — but the adjusted row height will stretch rows to fill the gap,
     // so we never under-count (rows * adjustedRH == bodyHeight exactly).
     const possible = Math.max(this.minRowsPerPage, Math.floor(bodyHeight / minRH));
-    return Math.min(this.maxRowsPerPage, possible);
+    return Math.min(currentMaxRows, possible);
   }
 
   /**
@@ -286,7 +290,7 @@ export class FlightView extends LitElement {
       max-width: 150px;
     }
 
-    /* Media Queries for Android TV 2K and 4K scaling */
+    /* Laptop / 1080p TV */
     @media (min-width: 1440px) {
       :host {
         --fids-row-font-main: 1.3rem;
@@ -306,6 +310,7 @@ export class FlightView extends LitElement {
       }
     }
 
+    /* 2K and 4K Displays */
     @media (min-width: 2500px) {
       :host {
         --fids-row-font-main: 2.2rem;
