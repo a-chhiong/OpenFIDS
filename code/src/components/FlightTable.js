@@ -69,6 +69,13 @@ export class FlightTable extends LitElement {
       color: var(--fids-dim);
       z-index: 5;
       text-align: left;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.18);
+    }
+
+    /* Light theme: the thead shadow must be nearly invisible so it
+       doesn't bleed over the first tbody row on a white background */
+    :host-context(.light-theme) thead {
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
     }
 
     th {

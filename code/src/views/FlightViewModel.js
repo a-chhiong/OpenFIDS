@@ -251,4 +251,59 @@ export class FlightViewModel {
     this.isAutoFlipEnabled = !this.isAutoFlipEnabled;
     this.host?.requestUpdate();
   }
+
+  // ---------------------------------------------------------------------------
+  // Sunrise / Sunset (NOAA simplified algorithm)
+  // Taoyuan Airport: 25.0797°N, 121.2342°E, UTC+8
+  // ---------------------------------------------------------------------------
+  static TPE_LAT        = 25.0797;
+  static TPE_LON        = 121.2342;
+  static TPE_UTC_OFFSET = 8;
+
+  /**
+   * Returns sunrise and sunset as local decimal hours for Taipei Airport.
+   * Accurate to ±1 minute using the NOAA simplified formula.
+   * @param {Date} [date]
+   * @returns {{ sunrise: number, sunset: number }}
+   */
+  getSunTimes(date = new Date()) {
+    const rad = d => d * Math.PI / 180;
+    const deg = r => r * 180 / Math.PI;
+
+    const { TPE_LAT: lat, TPE_LON: lon, TPE_UTC_OFFSET: utcOffset } = FlightViewModel;
+
+    // Day of year
+    const start     = new Date(date.getFullYear(), 0, 0);
+    const dayOfYear = Math.floor((date - start) / 86_400_000);
+
+    // Solar declination
+    const B    = rad((360 / 365) * (dayOfYear - 81));
+    const decl = rad(23.45 * Math.sin(B));
+
+    // Equation of time (minutes)
+    const EoT = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
+
+    // Time correction (minutes) — longitude offset from the time-zone meridian
+    const TC = 4 * (lon - 15 * utcOffset) + EoT;
+
+    // Hour angle at sunrise / sunset (degrees)
+    const cosHA = -Math.tan(rad(lat)) * Math.tan(decl);
+    const HA    = deg(Math.acos(Math.max(-1, Math.min(1, cosHA))));
+
+    return {
+      sunrise: 12 - HA / 15 - TC / 60,
+      sunset:  12 + HA / 15 - TC / 60,
+    };
+  }
+
+  /**
+   * Returns true when the current local clock is before sunrise or after sunset.
+   * @returns {boolean}
+   */
+  computeAutoIsDark() {
+    const now       = new Date();
+    const localHour = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
+    const { sunrise, sunset } = this.getSunTimes(now);
+    return localHour < sunrise || localHour >= sunset;
+  }
 }

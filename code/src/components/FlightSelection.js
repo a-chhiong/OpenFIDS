@@ -10,6 +10,8 @@ export class FlightSelection extends LitElement {
     collapsed: { type: Boolean },
     flightCount: { type: Number },
     isRefreshing: { type: Boolean },
+    isFullscreen: { type: Boolean },
+    themeMode: { type: String }, // 'dark' | 'light' | 'auto'
     open: { type: Boolean, state: true }
   };
 
@@ -51,14 +53,17 @@ export class FlightSelection extends LitElement {
       font-size: 1.25rem;
       display: block;
     }
-    .theme-toggle::part(base) {
+    .theme-toggle::part(base),
+    .fullscreen-toggle::part(base) {
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 0;
     }
-    .theme-toggle sl-icon {
+    .theme-toggle sl-icon,
+    .fullscreen-toggle sl-icon {
       display: block;
+      font-size: 1.35rem;
     }
     .label { font-weight: 700; font-size: 1.1rem; margin-left: 0.75rem; color: var(--fids-accent); }
     
@@ -162,10 +167,12 @@ export class FlightSelection extends LitElement {
       .label {
         font-size: 1.6rem;
       }
-      .theme-toggle {
+      .theme-toggle,
+      .fullscreen-toggle {
         font-size: 1.6rem;
       }
-      .theme-toggle::part(base) {
+      .theme-toggle::part(base),
+      .fullscreen-toggle::part(base) {
         width: 44px;
         height: 44px;
       }
@@ -205,10 +212,12 @@ export class FlightSelection extends LitElement {
       .label {
         font-size: 2.2rem;
       }
-      .theme-toggle {
+      .theme-toggle,
+      .fullscreen-toggle {
         font-size: 2.2rem;
       }
-      .theme-toggle::part(base) {
+      .theme-toggle::part(base),
+      .fullscreen-toggle::part(base) {
         width: 60px;
         height: 60px;
       }
@@ -242,6 +251,8 @@ export class FlightSelection extends LitElement {
     this.isDark = true;
     this.compact = false;
     this.flightCount = 0;
+    this.isFullscreen = false;
+    this.themeMode = 'auto';
     this.open = false;
 
     this._handleClickOutside = this._handleClickOutside.bind(this);
@@ -299,6 +310,10 @@ export class FlightSelection extends LitElement {
     this.dispatchEvent(new CustomEvent('theme-toggle'));
   }
 
+  _emitFullscreenToggle() {
+    this.dispatchEvent(new CustomEvent('fullscreen-toggle'));
+  }
+
   _toggleOpen() {
     this.open = !this.open;
   }
@@ -327,8 +342,18 @@ export class FlightSelection extends LitElement {
             ${this.flightCount} FLIGHTS
           </div>
 
-          <sl-button class="theme-toggle" @click="${() => this._emitThemeToggle()}" size="small" circle>
-            <sl-icon name="${this.isDark ? 'sun' : 'moon'}"></sl-icon>
+          <sl-button class="theme-toggle" @click="${() => this._emitThemeToggle()}" size="small" circle
+            title="Theme: ${this.themeMode} (click to cycle dark → light → auto)">
+            <sl-icon name="${
+              this.themeMode === 'dark'  ? 'moon-stars'        :
+              this.themeMode === 'light' ? 'sun'               :
+                                          'brightness-alt-high'
+            }"></sl-icon>
+          </sl-button>
+
+          <sl-button class="fullscreen-toggle" @click="${() => this._emitFullscreenToggle()}" size="small" circle
+            title="${this.isFullscreen ? 'Currently fullscreen' : 'Currently windowed'}">
+            <sl-icon name="${this.isFullscreen ? 'fullscreen' : 'fullscreen-exit'}"></sl-icon>
           </sl-button>
         </div>
 

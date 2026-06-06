@@ -74,7 +74,7 @@ export class FlightTableRow extends LitElement {
 
     return html`
       <style>
-        /* Base Landscape (Modernized) */
+        /* Base (dark theme) */
         tr {
           background: rgba(255, 255, 255, 0.03);
           box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -84,6 +84,16 @@ export class FlightTableRow extends LitElement {
         tr:hover {
           background: rgba(255, 255, 255, 0.06);
         }
+
+        /* Light theme: near-invisible shadow so rows don't bleed onto each other */
+        .light-theme tr {
+          background: rgba(0, 0, 0, 0.02);
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+        .light-theme tr:hover {
+          background: rgba(99, 102, 241, 0.05);
+        }
+
         .fids-cell { box-sizing: border-box; padding: 0 0.75rem; vertical-align: middle; border: none !important; }
         .fids-cell:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
         .fids-cell:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }

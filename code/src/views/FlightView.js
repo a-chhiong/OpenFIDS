@@ -14,13 +14,17 @@ export class FlightView extends LitElement {
   static properties = {
     vm: { type: Object },
     isDark: { type: Boolean },
+    isFullscreen: { type: Boolean },
+    themeMode: { type: String }, // 'dark' | 'light' | 'auto'
     ticker: { type: Number }
   };
 
   constructor() {
     super();
     this.vm = new FlightViewModel(this);
+    this.themeMode = 'auto'; // start in auto mode
     this.isDark = true;
+    this.isFullscreen = false;
     this.ticker = 0;
     this.currentPage = 1;
     this.minRowsPerPage = 3;
@@ -29,6 +33,8 @@ export class FlightView extends LitElement {
     this.isCompact = window.innerWidth <= 400;
     this._resizeObserver = null;
     this._clockInterval = null;
+    this._autoThemeInterval = null;
+    this._onFullscreenChange = this._onFullscreenChange.bind(this);
   }
 
   _getMinRowHeight() {
@@ -40,7 +46,10 @@ export class FlightView extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this._applyTheme();
+    // Apply initial auto theme before first render
+    this._refreshTheme();
+    this._startAutoThemeTimer();
+    document.addEventListener('fullscreenchange', this._onFullscreenChange);
   }
 
   disconnectedCallback() {
@@ -49,6 +58,11 @@ export class FlightView extends LitElement {
       this._resizeObserver.disconnect();
       this._resizeObserver = null;
     }
+    if (this._autoThemeInterval) {
+      clearInterval(this._autoThemeInterval);
+      this._autoThemeInterval = null;
+    }
+    document.removeEventListener('fullscreenchange', this._onFullscreenChange);
   }
 
   _autoFlipPage() {
@@ -147,9 +161,52 @@ export class FlightView extends LitElement {
     this.requestUpdate();
   }
 
-  toggleTheme() {
-    this.isDark = !this.isDark;
+  /**
+   * Cycles: dark → light → auto → dark
+   */
+  cycleTheme() {
+    const next = { dark: 'light', light: 'auto', auto: 'dark' };
+    this.themeMode = next[this.themeMode] ?? 'dark';
+    this._refreshTheme();
+  }
+
+  /**
+   * Recompute isDark from themeMode and apply CSS classes.
+   * Delegates sun-time computation to the ViewModel.
+   */
+  _refreshTheme() {
+    if (this.themeMode === 'light') {
+      this.isDark = false;
+    } else if (this.themeMode === 'dark') {
+      this.isDark = true;
+    } else {
+      // auto — delegate to ViewModel
+      this.isDark = this.vm.computeAutoIsDark();
+    }
     this._applyTheme();
+  }
+
+  /**
+   * Start a 60-second interval that re-evaluates the auto theme.
+   * Only meaningful in auto mode but runs cheaply regardless.
+   */
+  _startAutoThemeTimer() {
+    if (this._autoThemeInterval) return;
+    this._autoThemeInterval = setInterval(() => {
+      if (this.themeMode === 'auto') this._refreshTheme();
+    }, 60_000);
+  }
+
+  async toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      await document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      await document.exitFullscreen().catch(() => {});
+    }
+  }
+
+  _onFullscreenChange() {
+    this.isFullscreen = Boolean(document.fullscreenElement);
   }
 
   _applyTheme() {
@@ -163,6 +220,7 @@ export class FlightView extends LitElement {
       document.body.classList.remove('sl-theme-dark');
       document.body.classList.add('sl-theme-light');
     }
+    this.requestUpdate(); // ensure button icon re-renders
   }
 
   formatTimeRange() {
@@ -192,6 +250,8 @@ export class FlightView extends LitElement {
       --fids-warning: #f59e0b;
       --fids-danger: #ef4444;
       --fids-separator: rgba(255, 255, 255, 0.09);
+      --fids-shadow-ambient: 0 0 50px rgba(0, 0, 0, 0.3);
+      --fids-shadow-surface: 0 4px 6px -1px rgba(0, 0, 0, 0.25);
       /* Lock host to the full viewport — no page scroll */
       display: block;
       position: fixed;
@@ -222,6 +282,8 @@ export class FlightView extends LitElement {
       --fids-dim: #64748b;
       --fids-accent: #eab308;
       --fids-separator: rgba(0, 0, 0, 0.1);
+      --fids-shadow-ambient: 0 0 30px rgba(100, 116, 139, 0.08);
+      --fids-shadow-surface: 0 1px 3px rgba(0, 0, 0, 0.06);
     }
 
     :not(:defined) {
@@ -243,7 +305,7 @@ export class FlightView extends LitElement {
       background: var(--fids-bg);
       border-left: 1px solid var(--fids-separator);
       border-right: 1px solid var(--fids-separator);
-      box-shadow: 0 0 50px rgba(0,0,0,0.3);
+      box-shadow: var(--fids-shadow-ambient);
     }
 
     /* Header and live clock styles are managed in FlightHeader.js */
@@ -264,7 +326,7 @@ export class FlightView extends LitElement {
       overflow: hidden;
       background-color: var(--fids-surface);
       border-radius: 4px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      box-shadow: var(--fids-shadow-surface);
       margin-top: 0.25rem;
       margin-bottom: 0.25rem;
       display: flex;
@@ -357,12 +419,15 @@ export class FlightView extends LitElement {
           .startHourOffset=${this.vm.startHourOffset}
           .endHourOffset=${this.vm.endHourOffset}
           .isDark=${this.isDark}
+          .themeMode=${this.themeMode}
           .compact=${compact}
           .isRefreshing=${this.vm.isRefreshing}
           .flightCount=${this.vm.filteredFlights.length}
+          .isFullscreen=${this.isFullscreen}
           @view-changed=${e => { this.vm.setViewType(e.detail); this.currentPage = 1; }}
           @range-changed=${e => { this.vm.setRange(e.detail.start, e.detail.end); this.currentPage = 1; }}
-          @theme-toggle=${() => { this.toggleTheme(); }}
+          @theme-toggle=${() => { this.cycleTheme(); }}
+          @fullscreen-toggle=${() => { this.toggleFullscreen(); }}
         ></flight-selection>
 
         <flight-alert
