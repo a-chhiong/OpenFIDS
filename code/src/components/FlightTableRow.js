@@ -66,8 +66,8 @@ export class FlightTableRow extends LitElement {
     const dayOffset = this._getDayOffset(f.scheduledDate);
     const dayBadgeColor = dayOffset !== 0 ? 'var(--fids-warning, #f59e0b)' : 'var(--fids-dim)';
 
-    const displayStatus = (f.statusZH && f.statusEN) 
-      ? (f.statusZH + f.statusEN) 
+    const displayStatus = (f.statusZH && f.statusEN)
+      ? (f.statusZH + f.statusEN)
       : (f.flightStatus || '');
 
     const logoUrl = f.airlineCode ? `https://www.taoyuan-airport.com/uploads/airlogo/${f.airlineCode.toLowerCase()}.gif` : '';

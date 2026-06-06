@@ -179,11 +179,76 @@ export class FlightViewModel {
   }
 
   parseCSV(text) {
-    const lines = text.split(/\r?\n/);
+    if (!text) return;
+
+    const lines = this._lexCSV(text);
     this.flights = lines
-      .filter(line => line.trim() !== '' && line.includes(','))
-      .map(line => new FlightInfo(line.split(',')))
+      .map(row => new FlightInfo(row))
       .filter(f => f && f.flightNumber && f.scheduledDateTime && !isNaN(f.scheduledDateTime.getTime()));
+  }
+
+  /**
+   * Robust RFC 4180 compliant CSV line parser.
+   * Properly handles quoted values containing commas or line breaks.
+   * @param {string} text 
+   * @returns {string[][]} Array of unescaped row arrays
+   */
+  _lexCSV(text) {
+    const lines = [];
+    let row = [];
+    let cell = '';
+    let inQuotes = false;
+
+    // Standardize line endings to LF, stripping carriage returns smoothly
+    const cleanText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+    for (let i = 0; i < cleanText.length; i++) {
+      const char = cleanText[i];
+      const nextChar = cleanText[i + 1];
+
+      if (inQuotes) {
+        if (char === '"') {
+          if (nextChar === '"') {
+            // Handle escaped quotes: "" inside a quoted string maps to a single "
+            cell += '"';
+            i++;
+          } else {
+            // Closing quote found
+            inQuotes = false;
+          }
+        } else {
+          cell += char;
+        }
+      } else {
+        if (char === '"') {
+          // Opening quote found
+          inQuotes = true;
+        } else if (char === ',') {
+          // End of field
+          row.push(cell.trim());
+          cell = '';
+        } else if (char === '\n') {
+          // End of row (ignore terminal trailing empty newlines)
+          if (i === cleanText.length - 1 && cell === '' && row.length === 0) {
+            break;
+          }
+          row.push(cell.trim());
+          lines.push(row);
+          row = [];
+          cell = '';
+        } else {
+          cell += char;
+        }
+      }
+    }
+
+    // Push trailing data if file didn't end with a trailing newline
+    if (row.length > 0 || cell !== '') {
+      row.push(cell.trim());
+      lines.push(row);
+    }
+
+    return lines;
   }
 
   applyFilters() {
