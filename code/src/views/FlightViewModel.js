@@ -32,11 +32,11 @@ export class FlightViewModel {
   }
 
   get defaultFrom() {
-    return this.viewType === 'D' ? '0' : '-2';
+    return this.viewType === 'D' ? '-1' : '-1';
   }
 
   get defaultTo() {
-    return this.viewType === 'D' ? '6' : '4';
+    return this.viewType === 'D' ? '6' : '6';
   }
 
   hostConnected() {
@@ -48,9 +48,9 @@ export class FlightViewModel {
       await this.fetchData();
       this.isRefreshing = true;
       this.host?.requestUpdate();
-      setTimeout(() => { 
-        this.isRefreshing = false; 
-        this.host?.requestUpdate(); 
+      setTimeout(() => {
+        this.isRefreshing = false;
+        this.host?.requestUpdate();
       }, 800);
     }, 60000);
 
@@ -256,8 +256,8 @@ export class FlightViewModel {
   // Sunrise / Sunset (NOAA simplified algorithm)
   // Taoyuan Airport: 25.0797°N, 121.2342°E, UTC+8
   // ---------------------------------------------------------------------------
-  static TPE_LAT        = 25.0797;
-  static TPE_LON        = 121.2342;
+  static TPE_LAT = 25.0797;
+  static TPE_LON = 121.2342;
   static TPE_UTC_OFFSET = 8;
 
   /**
@@ -273,11 +273,11 @@ export class FlightViewModel {
     const { TPE_LAT: lat, TPE_LON: lon, TPE_UTC_OFFSET: utcOffset } = FlightViewModel;
 
     // Day of year
-    const start     = new Date(date.getFullYear(), 0, 0);
+    const start = new Date(date.getFullYear(), 0, 0);
     const dayOfYear = Math.floor((date - start) / 86_400_000);
 
     // Solar declination
-    const B    = rad((360 / 365) * (dayOfYear - 81));
+    const B = rad((360 / 365) * (dayOfYear - 81));
     const decl = rad(23.45 * Math.sin(B));
 
     // Equation of time (minutes)
@@ -288,11 +288,11 @@ export class FlightViewModel {
 
     // Hour angle at sunrise / sunset (degrees)
     const cosHA = -Math.tan(rad(lat)) * Math.tan(decl);
-    const HA    = deg(Math.acos(Math.max(-1, Math.min(1, cosHA))));
+    const HA = deg(Math.acos(Math.max(-1, Math.min(1, cosHA))));
 
     return {
       sunrise: 12 - HA / 15 - TC / 60,
-      sunset:  12 + HA / 15 - TC / 60,
+      sunset: 12 + HA / 15 - TC / 60,
     };
   }
 
@@ -301,7 +301,7 @@ export class FlightViewModel {
    * @returns {boolean}
    */
   computeAutoIsDark() {
-    const now       = new Date();
+    const now = new Date();
     const localHour = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;
     const { sunrise, sunset } = this.getSunTimes(now);
     return localHour < sunrise || localHour >= sunset;
