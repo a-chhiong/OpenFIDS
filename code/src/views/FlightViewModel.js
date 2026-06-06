@@ -119,27 +119,47 @@ export class FlightViewModel {
     this.nextRefreshIn = 60;
 
     const remoteUrl = 'https://www.taoyuan-airport.com/uploads/flightx/a_flight_v6.txt';
+
+    // Proxy strategies: each entry defines how to fetch and decode the response.
+    // - allorigins.win wraps the response in JSON { contents, status }, returning
+    //   the body as a (possibly re-encoded) string — use JSON + string decode.
+    // - corsproxy.io passes through raw bytes — use arrayBuffer + Big5 decode.
     const proxies = [
-      `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(remoteUrl)}`,
-      `https://cors-proxy.htmldriven.com/?url=${encodeURIComponent(remoteUrl)}`
+      {
+        url: `https://corsproxy.io/?url=${encodeURIComponent(remoteUrl)}`,
+        mode: 'binary',
+      },
+      {
+        url: `https://api.allorigins.win/get?url=${encodeURIComponent(remoteUrl)}`,
+        mode: 'json',
+      },
     ];
 
     let success = false;
-    for (const proxyUrl of proxies) {
+    for (const proxy of proxies) {
       try {
-        const response = await fetch(proxyUrl);
+        const response = await fetch(proxy.url);
         if (!response.ok) throw new Error(`Status ${response.status}`);
 
-        const buffer = await response.arrayBuffer();
-        const decoder = new TextDecoder('big5');
-        const text = decoder.decode(buffer);
+        let text;
+        if (proxy.mode === 'json') {
+          // allorigins.win wraps the payload: { contents: "...", status: {...} }
+          const json = await response.json();
+          if (!json?.contents) throw new Error('Empty contents from allorigins');
+          text = json.contents;
+        } else {
+          // Raw passthrough proxy — decode Big5 binary directly
+          const buffer = await response.arrayBuffer();
+          const decoder = new TextDecoder('big5');
+          text = decoder.decode(buffer);
+        }
 
         this.parseCSV(text);
         this.lastUpdated = new Date();
         success = true;
         break;
       } catch (err) {
-        console.warn(`Proxy failed (${proxyUrl}):`, err.message);
+        console.warn(`Proxy failed (${proxy.url}):`, err.message);
       }
     }
 
