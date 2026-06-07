@@ -247,12 +247,6 @@ export class FlightViewModel {
         return fTime >= startTime && fTime <= endTime;
       })
       .sort((a, b) => a.scheduledDateTime - b.scheduledDateTime);
-
-    if (this.flights.length > 0 && this.filteredFlights.length === 0) {
-      this.filteredFlights = this.flights
-        .filter(f => (f.type || '').toUpperCase() === viewType)
-        .sort((a, b) => a.scheduledDateTime - b.scheduledDateTime);
-    }
   }
 
   setRange(start, end) {

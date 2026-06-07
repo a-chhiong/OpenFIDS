@@ -63,12 +63,6 @@ export class KhhDataProvider extends FlightDataProvider {
         const scheduledDateTime = new Date(`${currentDateStr}T${expectTime}`);
         const flightHour = parseInt(expectTime.split(':')[0], 10);
 
-        if (airportHour >= 22 && flightHour <= 6) {
-          scheduledDateTime.setDate(scheduledDateTime.getDate() + 1);
-        } else if (airportHour <= 6 && flightHour >= 22) {
-          scheduledDateTime.setDate(scheduledDateTime.getDate() - 1);
-        }
-
         const realTime = item.realTime || '';
         let estimatedDateTime = null;
         if (realTime && realTime.trim()) {
@@ -107,7 +101,7 @@ export class KhhDataProvider extends FlightDataProvider {
           gate: item.airBoardingGate || '',
           scheduledDate: formatDate(scheduledDateTime),
           scheduledTime: expectTime,
-          estimatedDate: estimatedDateTime ? formatDate(estimatedDateTime) : '',
+          estimatedDate: formatDate(scheduledDateTime),
           estimatedTime: realTime,
           destinationIATA: viewType === 'D' ? (item.goalAirportCode || '') : 'KHH',
           originIATA: viewType === 'D' ? 'KHH' : (item.upAirportCode || ''),
@@ -128,6 +122,6 @@ export class KhhDataProvider extends FlightDataProvider {
         };
         return new FlightInfo(props);
       })
-      .filter(f => f && f.flightNumber && f.scheduledDate);
+      .filter(f => f && f.flightNumber && f.scheduledDateTime && !isNaN(f.scheduledDateTime.getTime()));
   }
 }

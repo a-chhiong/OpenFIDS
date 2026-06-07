@@ -56,7 +56,7 @@ export class TpeDataProvider extends FlightDataProvider {
         };
         return new FlightInfo(props);
       })
-      .filter(f => f && f.flightNumber && f.scheduledDate);
+      .filter(f => f && f.flightNumber && f.scheduledDateTime && !isNaN(f.scheduledDateTime.getTime()));
   }
 
   /**
