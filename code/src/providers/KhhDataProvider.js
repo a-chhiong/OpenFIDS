@@ -128,6 +128,6 @@ export class KhhDataProvider extends FlightDataProvider {
         };
         return new FlightInfo(props);
       })
-      .filter(f => f && f.flightNumber && f.scheduledDateTime && !isNaN(f.scheduledDateTime.getTime()));
+      .filter(f => f && f.flightNumber && f.scheduledDate && !isNaN(f.scheduledDate.getTime()));
   }
 }
