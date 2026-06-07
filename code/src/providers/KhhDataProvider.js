@@ -63,9 +63,9 @@ export class KhhDataProvider extends FlightDataProvider {
         const scheduledDateTime = new Date(`${currentDateStr}T${expectTime}`);
         const flightHour = parseInt(expectTime.split(':')[0], 10);
 
-        if (airportHour >= 18 && flightHour <= 6) {
+        if (airportHour >= 22 && flightHour <= 6) {
           scheduledDateTime.setDate(scheduledDateTime.getDate() + 1);
-        } else if (airportHour <= 6 && flightHour >= 18) {
+        } else if (airportHour <= 6 && flightHour >= 22) {
           scheduledDateTime.setDate(scheduledDateTime.getDate() - 1);
         }
 
