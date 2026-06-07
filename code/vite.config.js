@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: '/TPE-FIDS/',
+  base: '/OpenFIDS/',
   build: {
     outDir: 'dist',
   },

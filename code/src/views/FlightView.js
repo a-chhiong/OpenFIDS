@@ -2,13 +2,11 @@ import { LitElement, html, css } from 'lit';
 import { FlightViewModel } from './FlightViewModel.js';
 
 // Explicitly import Shoelace components for Shadow DOM compatibility
-import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/components/select/select.js';
-import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/components/option/option.js';
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/components/icon/icon.js';
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/components/button/button.js';
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/components/alert/alert.js';
-import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/components/input/input.js';
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/components/tooltip/tooltip.js';
+import '../components/FlightSettingsDialog.js';
 
 export class FlightView extends LitElement {
   static properties = {
@@ -16,37 +14,42 @@ export class FlightView extends LitElement {
     isDark: { type: Boolean },
     isFullscreen: { type: Boolean },
     themeMode: { type: String }, // 'dark' | 'light' | 'auto'
-    ticker: { type: Number }
+    ticker: { type: Number },
+    _isSettingsOpen: { type: Boolean }
   };
 
   constructor() {
     super();
-    this.vm = new FlightViewModel(this);
-    this.themeMode = 'auto'; // start in auto mode
+    this.themeMode = 'auto';
     this.isDark = true;
     this.isFullscreen = false;
     this.ticker = 0;
+    this._isSettingsOpen = false;
     this.currentPage = 1;
     this.minRowsPerPage = 3;
     this.maxRowsPerPage = 20;
-    this._tableBodyHeight = 0; // height available for rows (wrapper minus thead)
+    this._tableBodyHeight = 0;
     this.isCompact = window.innerWidth <= 400;
     this._resizeObserver = null;
     this._clockInterval = null;
     this._autoThemeInterval = null;
     this._onFullscreenChange = this._onFullscreenChange.bind(this);
+    this.vm = new FlightViewModel(this);
   }
 
   _getMinRowHeight() {
     if (typeof window === 'undefined') return 64;
-    if (window.innerWidth >= 2500) return 140; // 2K and 4K resolution TVs
+    if (window.innerWidth >= 2500) return 140; // 2K and 4K TV displays
     if (window.innerWidth >= 1440) return 72;  // Small Desktop / 1080p
     return 64; // default / mobile
   }
 
   connectedCallback() {
     super.connectedCallback();
-    // Apply initial auto theme before first render
+    const savedTheme = localStorage.getItem('openfids_theme_mode');
+    if (savedTheme === 'dark' || savedTheme === 'light' || savedTheme === 'auto') {
+      this.themeMode = savedTheme;
+    }
     this._refreshTheme();
     this._startAutoThemeTimer();
     document.addEventListener('fullscreenchange', this._onFullscreenChange);
@@ -78,33 +81,22 @@ export class FlightView extends LitElement {
     const minRH = this._getMinRowHeight();
     const bodyHeight = this._tableBodyHeight || 0;
     
-    // Cap max rows to 10 on TVs (1080p, 2K, 4K) to improve readability and avoid crowding
     const currentMaxRows = window.innerWidth >= 1440 ? 10 : this.maxRowsPerPage;
     
     if (bodyHeight <= 0) {
-      // Fallback before first measurement: use 65% of viewport
       return Math.max(this.minRowsPerPage, Math.min(currentMaxRows, Math.floor((window.innerHeight * 0.65) / minRH)));
     }
     
-    // Account for border-spacing: 0 0.5rem (approx 8px) added for modern layout.
-    // N rows will have N+1 gaps. bodyHeight - gap >= rows * (minRH + gap)
     const gap = 8;
     const possible = Math.max(this.minRowsPerPage, Math.floor((bodyHeight - gap) / (minRH + gap)));
     return Math.min(currentMaxRows, possible);
   }
 
-  /**
-   * Compute the exact row height that perfectly fills the table body area.
-   * We use a precise (non-floored) value so CSS distributes the space without
-   * leaving a clipped gap at the bottom.
-   */
   _getAdjustedRowHeight() {
     const rows = this._getRowsPerPage();
     const minRH = this._getMinRowHeight();
     if (rows <= 0 || this._tableBodyHeight <= 0) return minRH;
     
-    // We explicitly floor the body height to ignore fractional sub-pixels from getBoundingClientRect.
-    // Then we subtract a small safety buffer (2px) plus the total height of all row gaps (border-spacing).
     const gap = 8;
     const totalGapsHeight = (rows + 1) * gap;
     const safeBodyHeight = Math.floor(this._tableBodyHeight) - totalGapsHeight - 2;
@@ -119,7 +111,7 @@ export class FlightView extends LitElement {
   }
 
   _setupResizeObserver() {
-    if (this._resizeObserver) return; // already set up
+    if (this._resizeObserver) return;
     const wrapper = this.shadowRoot?.querySelector('.flight-table-wrapper');
     if (!wrapper) return;
 
@@ -135,7 +127,6 @@ export class FlightView extends LitElement {
     if (!wrapper) return;
     const wrapperHeight = wrapper.getBoundingClientRect().height;
 
-    // Try to find the thead inside the flight-table shadow root
     const flightTable = wrapper.querySelector('flight-table');
     let theadHeight = 0;
     if (flightTable?.shadowRoot) {
@@ -161,35 +152,24 @@ export class FlightView extends LitElement {
     this.requestUpdate();
   }
 
-  /**
-   * Cycles: dark → light → auto → dark
-   */
   cycleTheme() {
     const next = { dark: 'light', light: 'auto', auto: 'dark' };
     this.themeMode = next[this.themeMode] ?? 'dark';
+    localStorage.setItem('openfids_theme_mode', this.themeMode);
     this._refreshTheme();
   }
 
-  /**
-   * Recompute isDark from themeMode and apply CSS classes.
-   * Delegates sun-time computation to the ViewModel.
-   */
   _refreshTheme() {
     if (this.themeMode === 'light') {
       this.isDark = false;
     } else if (this.themeMode === 'dark') {
       this.isDark = true;
     } else {
-      // auto — delegate to ViewModel
       this.isDark = this.vm.computeAutoIsDark();
     }
     this._applyTheme();
   }
 
-  /**
-   * Start a 60-second interval that re-evaluates the auto theme.
-   * Only meaningful in auto mode but runs cheaply regardless.
-   */
   _startAutoThemeTimer() {
     if (this._autoThemeInterval) return;
     this._autoThemeInterval = setInterval(() => {
@@ -220,21 +200,6 @@ export class FlightView extends LitElement {
       document.body.classList.remove('sl-theme-dark');
       document.body.classList.add('sl-theme-light');
     }
-    this.requestUpdate(); // ensure button icon re-renders
-  }
-
-  formatTimeRange() {
-    const now = new Date();
-    const start = new Date(now.getTime() + this.vm.startHourOffset * 60 * 60 * 1000);
-    const end = new Date(now.getTime() + this.vm.endHourOffset * 60 * 60 * 1000);
-    const fmt = (d) => d.toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' });
-    return `${fmt(start)} - ${fmt(end)}`;
-  }
-
-  handleRangeChange() {
-    const start = this.shadowRoot.getElementById('start-hour').value;
-    const end = this.shadowRoot.getElementById('end-hour').value;
-    this.vm.setRange(start, end);
     this.requestUpdate();
   }
 
@@ -252,7 +217,6 @@ export class FlightView extends LitElement {
       --fids-separator: rgba(255, 255, 255, 0.09);
       --fids-shadow-ambient: 0 0 50px rgba(0, 0, 0, 0.3);
       --fids-shadow-surface: 0 4px 6px -1px rgba(0, 0, 0, 0.25);
-      /* Lock host to the full viewport — no page scroll */
       display: block;
       position: fixed;
       inset: 0;
@@ -261,7 +225,6 @@ export class FlightView extends LitElement {
       color: var(--fids-text);
       background: var(--fids-bg);
 
-      /* Default row and table fonts for mobile / smaller layouts */
       --fids-row-font-main: 0.95rem;
       --fids-row-font-sub: 0.68rem;
       --fids-row-font-city-en: 0.78rem;
@@ -290,7 +253,6 @@ export class FlightView extends LitElement {
       visibility: hidden;
     }
 
-    /* Full-height flex column — children stack vertically */
     .app-container {
       display: flex;
       flex-direction: column;
@@ -301,28 +263,19 @@ export class FlightView extends LitElement {
       box-sizing: border-box;
       overflow: hidden;
       padding: 0.25rem 0.5rem;
-      /* Premium panel effect on large screens */
       background: var(--fids-bg);
       border-left: 1px solid var(--fids-separator);
       border-right: 1px solid var(--fids-separator);
       box-shadow: var(--fids-shadow-ambient);
     }
 
-    /* Header and live clock styles are managed in FlightHeader.js */
-
-    flight-config {
-      flex: 0 0 auto;
-    }
-
     flight-alert {
       flex: 0 0 auto;
     }
 
-    /* The table wrapper fills ALL remaining vertical space */
     .flight-table-wrapper {
       flex: 1 1 0;
       min-height: 0;
-      /* Vertical overflow stays locked; horizontal is handled by flight-table internally */
       overflow: hidden;
       background-color: var(--fids-surface);
       border-radius: 4px;
@@ -336,8 +289,6 @@ export class FlightView extends LitElement {
     flight-table {
       flex: 1 1 0;
       min-height: 0;
-      /* Do NOT set overflow:hidden here — it would clip flight-table's
-         internal horizontal scroll area in its shadow DOM. */
       display: block;
     }
 
@@ -345,19 +296,6 @@ export class FlightView extends LitElement {
       flex: 0 0 auto;
     }
 
-    .nav-links a {
-      text-decoration: none;
-      font-size: 0.85rem;
-      font-weight: 700;
-      text-transform: uppercase;
-    }
-
-    sl-select {
-      min-width: 130px;
-      max-width: 150px;
-    }
-
-    /* Laptop / 1080p TV */
     @media (min-width: 1440px) {
       :host {
         --fids-row-font-main: 1.3rem;
@@ -377,7 +315,6 @@ export class FlightView extends LitElement {
       }
     }
 
-    /* 2K and 4K Displays */
     @media (min-width: 2500px) {
       :host {
         --fids-row-font-main: 2.2rem;
@@ -396,7 +333,6 @@ export class FlightView extends LitElement {
 
   render() {
     const isDeparture = this.vm.viewType === 'D';
-
     const rowsPerPage = this._getRowsPerPage();
     const pageCount = this._getPageCount();
     if (this.currentPage > pageCount) {
@@ -404,31 +340,33 @@ export class FlightView extends LitElement {
     }
     const offset = (this.currentPage - 1) * rowsPerPage;
     const pageFlights = /** @type {any[]} */ (this.vm.filteredFlights.slice(offset, offset + rowsPerPage));
-    const compact = window.innerWidth <= 640;
     const adjustedRowHeight = this._getAdjustedRowHeight();
 
     return html`
       <div class="app-container">
         <flight-header
-          title="TPE FIDS"
+          .airportCode=${this.vm.airportCode}
+          .viewType=${this.vm.viewType}
           .isRefreshing=${this.vm.isLoading || this.vm.isRefreshing}
+          @open-settings=${() => { this._isSettingsOpen = true; }}
+          @theme-toggle=${() => { this.cycleTheme(); }}
         ></flight-header>
 
-        <flight-selection
+        <flight-settings-dialog
+          .open=${this._isSettingsOpen}
           .viewType=${this.vm.viewType}
           .startHourOffset=${this.vm.startHourOffset}
           .endHourOffset=${this.vm.endHourOffset}
-          .isDark=${this.isDark}
+          .airportCode=${this.vm.airportCode}
+          .routeType=${this.vm.routeType}
           .themeMode=${this.themeMode}
-          .compact=${compact}
-          .isRefreshing=${this.vm.isRefreshing}
-          .flightCount=${this.vm.filteredFlights.length}
-          .isFullscreen=${this.isFullscreen}
-          @view-changed=${e => { this.vm.setViewType(e.detail); this.currentPage = 1; }}
-          @range-changed=${e => { this.vm.setRange(e.detail.start, e.detail.end); this.currentPage = 1; }}
-          @theme-toggle=${() => { this.cycleTheme(); }}
-          @fullscreen-toggle=${() => { this.toggleFullscreen(); }}
-        ></flight-selection>
+          @close-dialog=${() => { this._isSettingsOpen = false; }}
+          @confirm-settings=${e => {
+            this.vm.updateSettings(e.detail);
+            this.currentPage = 1;
+            this._isSettingsOpen = false;
+          }}
+        ></flight-settings-dialog>
 
         <flight-alert
           .message=${this.vm.error || ''}
@@ -448,23 +386,16 @@ export class FlightView extends LitElement {
         <flight-pagination
           .currentPage=${this.currentPage}
           .pageCount=${pageCount}
+          .flightCount=${this.vm.filteredFlights.length}
           .isAutoFlipEnabled=${this.vm.isAutoFlipEnabled}
+          .isFullscreen=${this.isFullscreen}
           @page-changed=${(e) => this._setPage(Number(e.detail.page))}
           @autoflip-toggle=${() => this.vm.toggleAutoFlip()}
+          @fullscreen-toggle=${() => { this.toggleFullscreen(); }}
         ></flight-pagination>
       </div>
     `;
   }
-
-  getStatusClass(status) {
-    if (!status) return '';
-    const s = status.toLowerCase();
-    if (s.includes('到') || s.includes('arrived') || s.includes('準時') || s.includes('on time')) return 'status-ontime';
-    if (s.includes('誤') || s.includes('delayed') || s.includes('改時間')) return 'status-delayed';
-    if (s.includes('消') || s.includes('cancelled')) return 'status-cancelled';
-    return 'status-estimated';
-  }
 }
 
 customElements.define('flight-view', FlightView);
-

@@ -1,30 +1,31 @@
 export class FlightInfo {
-  constructor(data) {
-    this.terminal = data[0]?.trim();
-    this.type = data[1]?.trim(); // A: Arrival, D: Departure
-    this.airlineCode = data[2]?.trim();
-    this.airlineNameZH = data[3]?.trim();
-    this.flightNumber = data[4]?.trim();
-    this.gate = data[5]?.trim();
-    this.scheduledDate = data[6]?.trim();
-    this.scheduledTime = data[7]?.trim();
-    this.estimatedDate = data[8]?.trim();
-    this.estimatedTime = data[9]?.trim();
-    this.destinationIATA = data[10]?.trim();
-    this.originIATA = data[10]?.trim();
-    this.destinationEN = data[11]?.trim();
-    this.originEN = data[11]?.trim();
-    this.destinationZH = data[12]?.trim();
-    this.originZH = data[12]?.trim();
-    this.flightStatus = data[13]?.trim();
-    this.aircraftType = data[14]?.trim();
-    this.viaIATA = data[15]?.trim();
-    this.viaEN = data[16]?.trim();
-    this.viaZH = data[17]?.trim();
-    this.baggageCarousel = data[18]?.trim();
-    this.checkInCounter = data[19]?.trim();
-    this.statusZH = data[20]?.trim();
-    this.statusEN = data[21]?.trim();
+  constructor(props = {}) {
+    this.terminal = props.terminal?.trim() || '';
+    this.type = props.type?.trim() || ''; // A: Arrival, D: Departure
+    this.airlineCode = props.airlineCode?.trim() || '';
+    this.airlineNameZH = props.airlineNameZH?.trim() || '';
+    this.flightNumber = props.flightNumber?.trim() || '';
+    this.gate = props.gate?.trim() || '';
+    this.scheduledDate = props.scheduledDate?.trim() || '';
+    this.scheduledTime = props.scheduledTime?.trim() || '';
+    this.estimatedDate = props.estimatedDate?.trim() || '';
+    this.estimatedTime = props.estimatedTime?.trim() || '';
+    this.destinationIATA = props.destinationIATA?.trim() || '';
+    this.originIATA = props.originIATA?.trim() || '';
+    this.destinationEN = props.destinationEN?.trim() || '';
+    this.originEN = props.originEN?.trim() || '';
+    this.destinationZH = props.destinationZH?.trim() || '';
+    this.originZH = props.originZH?.trim() || '';
+    this.flightStatus = props.flightStatus?.trim() || '';
+    this.aircraftType = props.aircraftType?.trim() || '';
+    this.viaIATA = props.viaIATA?.trim() || '';
+    this.viaEN = props.viaEN?.trim() || '';
+    this.viaZH = props.viaZH?.trim() || '';
+    this.baggageCarousel = props.baggageCarousel?.trim() || '';
+    this.checkInCounter = props.checkInCounter?.trim() || '';
+    this.statusZH = props.statusZH?.trim() || '';
+    this.statusEN = props.statusEN?.trim() || '';
+    this.airlineLogo = props.airlineLogo?.trim() || '';
   }
 
   get fullFlightNumber() {

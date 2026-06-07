@@ -70,7 +70,7 @@ export class FlightTableRow extends LitElement {
       ? (f.statusZH + f.statusEN)
       : (f.flightStatus || '');
 
-    const logoUrl = f.airlineCode ? `https://www.taoyuan-airport.com/uploads/airlogo/${f.airlineCode.toLowerCase()}.gif` : '';
+    const logoUrl = f.airlineLogo || '';
 
     return html`
       <style>

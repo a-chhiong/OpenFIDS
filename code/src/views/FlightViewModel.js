@@ -1,4 +1,5 @@
-import { FlightInfo } from '../models/FlightInfo.js';
+import { airports } from '../config/Airports.js';
+import { ProviderFactory } from '../providers/ProviderFactory.js';
 
 export class FlightViewModel {
   constructor(host) {
@@ -21,26 +22,124 @@ export class FlightViewModel {
     this.timerCountdown = null;
     this.timerPage = null;
 
+    this.resolveState();
+  }
+
+  resolveState() {
     const hash = window.location.hash.toLowerCase();
-    const routeType = hash.includes('arrival') ? 'A' : hash.includes('departure') ? 'D' : 'D';
-
     const params = new URLSearchParams(window.location.search);
-    this.viewType = routeType;
 
-    this.startHourOffset = parseInt(params.get('from') || this.defaultFrom);
-    this.endHourOffset = parseInt(params.get('to') || this.defaultTo);
+    let airportKey = 'tpe';
+    let viewType = 'D';
+
+    // 1. Resolve Airport and View Type from hash
+    const cleanedHash = hash.replace(/^#/, '');
+    const hashParts = cleanedHash.split('/').filter(Boolean);
+
+    if (hashParts.length >= 2) {
+      const apt = hashParts[0];
+      const view = hashParts[1];
+      if (airports[apt] && (view === 'departure' || view === 'arrival')) {
+        airportKey = apt;
+        viewType = view === 'arrival' ? 'A' : 'D';
+      }
+    } else {
+      const savedAirport = localStorage.getItem('openfids_airport');
+      const savedViewType = localStorage.getItem('openfids_view_type');
+      if (savedAirport && airports[savedAirport]) airportKey = savedAirport;
+      if (savedViewType === 'A' || savedViewType === 'D') viewType = savedViewType;
+    }
+
+    // 2. Resolve Route Type
+    let routeType = 'intl';
+    if (params.has('route')) {
+      routeType = params.get('route') === 'dom' ? 'dom' : 'intl';
+    } else {
+      const savedRouteType = localStorage.getItem('openfids_route_type');
+      if (savedRouteType === 'intl' || savedRouteType === 'dom') {
+        routeType = savedRouteType;
+      }
+    }
+
+    // 3. Resolve Time Offsets
+    const config = airports[airportKey];
+    let fromOffset = config.defaultFrom;
+    let toOffset = config.defaultTo;
+
+    if (params.has('from')) {
+      fromOffset = parseInt(params.get('from'), 10);
+    } else {
+      const savedFrom = localStorage.getItem('openfids_from');
+      if (savedFrom !== null && !isNaN(parseInt(savedFrom, 10))) {
+        fromOffset = parseInt(savedFrom, 10);
+      }
+    }
+
+    if (params.has('to')) {
+      toOffset = parseInt(params.get('to'), 10);
+    } else {
+      const savedTo = localStorage.getItem('openfids_to');
+      if (savedTo !== null && !isNaN(parseInt(savedTo, 10))) {
+        toOffset = parseInt(savedTo, 10);
+      }
+    }
+
+    // Poka-yoke: If the airport does not support domestic flights, fallback to intl
+    const hasDomestic = !!(config.apiEndpoints && config.apiEndpoints.dom_D && config.apiEndpoints.dom_A);
+    if (routeType === 'dom' && !hasDomestic) {
+      routeType = 'intl';
+    }
+
+    // 4. Resolve Theme Mode
+    let themeMode = 'auto';
+    const savedTheme = localStorage.getItem('openfids_theme_mode');
+    if (savedTheme === 'dark' || savedTheme === 'light' || savedTheme === 'auto') {
+      themeMode = savedTheme;
+    }
+    if (this.host) {
+      this.host.themeMode = themeMode;
+    }
+
+    this.airportCode = airportKey.toUpperCase();
+    this.viewType = viewType;
+    this.routeType = routeType;
+    this.startHourOffset = fromOffset;
+    this.endHourOffset = toOffset;
+
+    this.saveStateToLocalStorage();
+    this.provider = ProviderFactory.createProvider(config);
+    this.syncUrlBar();
   }
 
-  get defaultFrom() {
-    return this.viewType === 'D' ? '-1' : '-1';
+  saveStateToLocalStorage() {
+    const airportKey = this.airportCode.toLowerCase();
+    localStorage.setItem('openfids_airport', airportKey);
+    localStorage.setItem('openfids_view_type', this.viewType);
+    localStorage.setItem('openfids_route_type', this.routeType);
+    localStorage.setItem('openfids_from', String(this.startHourOffset));
+    localStorage.setItem('openfids_to', String(this.endHourOffset));
+    if (this.host && this.host.themeMode) {
+      localStorage.setItem('openfids_theme_mode', this.host.themeMode);
+    }
   }
 
-  get defaultTo() {
-    return this.viewType === 'D' ? '6' : '6';
+  syncUrlBar() {
+    const airportKey = this.airportCode.toLowerCase();
+    const viewName = this.viewType === 'A' ? 'arrival' : 'departure';
+    const hash = `#/${airportKey}/${viewName}`;
+
+    const url = new URL(window.location);
+    url.searchParams.set('route', this.routeType);
+    url.searchParams.set('from', this.startHourOffset >= 0 ? `+${this.startHourOffset}` : String(this.startHourOffset));
+    url.searchParams.set('to', this.endHourOffset >= 0 ? `+${this.endHourOffset}` : String(this.endHourOffset));
+    
+    const newUrlStr = `${url.pathname}${url.search}${hash}`;
+    if (window.location.hash !== hash || window.location.search !== url.search) {
+      window.history.replaceState({}, '', newUrlStr);
+    }
   }
 
   hostConnected() {
-    this._syncRoute();
     this.fetchData();
     this.lastHiddenTime = 0;
 
@@ -86,11 +185,8 @@ export class FlightViewModel {
 
   _handleVisibilityChange = () => {
     if (document.visibilityState === 'hidden') {
-      // Record the exact time the app goes into the background
       this.lastHiddenTime = Date.now();
     } else if (document.visibilityState === 'visible') {
-      // When coming back, check how long it was hidden
-      // Only refresh if it was hidden for more than 1 hour (3600000 ms)
       if (this.lastHiddenTime > 0 && Date.now() - this.lastHiddenTime >= 3600000) {
         this.fetchData();
         this.nextRefreshIn = 60;
@@ -99,14 +195,11 @@ export class FlightViewModel {
   };
 
   _syncRoute() {
-    const hash = window.location.hash.toLowerCase();
-    if (hash.includes('arrival')) {
-      this.viewType = 'A';
-    } else if (hash.includes('departure')) {
-      this.viewType = 'D';
+    this.resolveState();
+    if (this.host && typeof this.host._refreshTheme === 'function') {
+      this.host._refreshTheme();
     }
-    this.applyFilters();
-    this.host?.requestUpdate();
+    this.fetchData();
   }
 
   async fetchData() {
@@ -118,52 +211,11 @@ export class FlightViewModel {
     this.error = null;
     this.nextRefreshIn = 60;
 
-    const remoteUrl = 'https://www.taoyuan-airport.com/uploads/flightx/a_flight_v6.txt';
-
-    // Proxy strategies: each entry defines how to fetch and decode the response.
-    // - allorigins.win wraps the response in JSON { contents, status }, returning
-    //   the body as a (possibly re-encoded) string — use JSON + string decode.
-    // - corsproxy.io passes through raw bytes — use arrayBuffer + Big5 decode.
-    const proxies = [
-      {
-        url: `https://corsproxy.io/?url=${encodeURIComponent(remoteUrl)}`,
-        mode: 'binary',
-      },
-      {
-        url: `https://api.allorigins.win/get?url=${encodeURIComponent(remoteUrl)}`,
-        mode: 'json',
-      },
-    ];
-
-    let success = false;
-    for (const proxy of proxies) {
-      try {
-        const response = await fetch(proxy.url);
-        if (!response.ok) throw new Error(`Status ${response.status}`);
-
-        let text;
-        if (proxy.mode === 'json') {
-          // allorigins.win wraps the payload: { contents: "...", status: {...} }
-          const json = await response.json();
-          if (!json?.contents) throw new Error('Empty contents from allorigins');
-          text = json.contents;
-        } else {
-          // Raw passthrough proxy — decode Big5 binary directly
-          const buffer = await response.arrayBuffer();
-          const decoder = new TextDecoder('big5');
-          text = decoder.decode(buffer);
-        }
-
-        this.parseCSV(text);
-        this.lastUpdated = new Date();
-        success = true;
-        break;
-      } catch (err) {
-        console.warn(`Proxy failed (${proxy.url}):`, err.message);
-      }
-    }
-
-    if (!success) {
+    try {
+      this.flights = await this.provider.fetchFlights(this.routeType, this.viewType);
+      this.lastUpdated = new Date();
+    } catch (err) {
+      console.error('Provider fetch failed:', err);
       this.error = `Failed to fetch live data from all available proxies. The airport server might be temporarily blocking requests.`;
       if (!this.hasLoaded) {
         this.flights = [];
@@ -178,83 +230,13 @@ export class FlightViewModel {
     this.host?.requestUpdate();
   }
 
-  parseCSV(text) {
-    if (!text) return;
-
-    const lines = this._lexCSV(text);
-    this.flights = lines
-      .map(row => new FlightInfo(row))
-      .filter(f => f && f.flightNumber && f.scheduledDateTime && !isNaN(f.scheduledDateTime.getTime()));
-  }
-
-  /**
-   * Robust RFC 4180 compliant CSV line parser.
-   * Properly handles quoted values containing commas or line breaks.
-   * @param {string} text 
-   * @returns {string[][]} Array of unescaped row arrays
-   */
-  _lexCSV(text) {
-    const lines = [];
-    let row = [];
-    let cell = '';
-    let inQuotes = false;
-
-    // Standardize line endings to LF, stripping carriage returns smoothly
-    const cleanText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-
-    for (let i = 0; i < cleanText.length; i++) {
-      const char = cleanText[i];
-      const nextChar = cleanText[i + 1];
-
-      if (inQuotes) {
-        if (char === '"') {
-          if (nextChar === '"') {
-            // Handle escaped quotes: "" inside a quoted string maps to a single "
-            cell += '"';
-            i++;
-          } else {
-            // Closing quote found
-            inQuotes = false;
-          }
-        } else {
-          cell += char;
-        }
-      } else {
-        if (char === '"') {
-          // Opening quote found
-          inQuotes = true;
-        } else if (char === ',') {
-          // End of field
-          row.push(cell.trim());
-          cell = '';
-        } else if (char === '\n') {
-          // End of row (ignore terminal trailing empty newlines)
-          if (i === cleanText.length - 1 && cell === '' && row.length === 0) {
-            break;
-          }
-          row.push(cell.trim());
-          lines.push(row);
-          row = [];
-          cell = '';
-        } else {
-          cell += char;
-        }
-      }
-    }
-
-    // Push trailing data if file didn't end with a trailing newline
-    if (row.length > 0 || cell !== '') {
-      row.push(cell.trim());
-      lines.push(row);
-    }
-
-    return lines;
-  }
-
   applyFilters() {
     const now = new Date();
-    const startTime = new Date(now.getTime() + this.startHourOffset * 60 * 60 * 1000);
-    const endTime = new Date(now.getTime() + this.endHourOffset * 60 * 60 * 1000);
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const airportTime = new Date(utc + (3600000 * airports[this.airportCode.toLowerCase()].utcOffset));
+
+    const startTime = new Date(airportTime.getTime() + this.startHourOffset * 60 * 60 * 1000);
+    const endTime = new Date(airportTime.getTime() + this.endHourOffset * 60 * 60 * 1000);
     const viewType = (this.viewType || 'D').toUpperCase();
 
     this.filteredFlights = this.flights
@@ -266,7 +248,6 @@ export class FlightViewModel {
       })
       .sort((a, b) => a.scheduledDateTime - b.scheduledDateTime);
 
-    // fallback: if we have any flights in the source and none after filtering, keep all same viewType flights to avoid always showing 'No flights found' due parse drift.
     if (this.flights.length > 0 && this.filteredFlights.length === 0) {
       this.filteredFlights = this.flights
         .filter(f => (f.type || '').toUpperCase() === viewType)
@@ -277,39 +258,100 @@ export class FlightViewModel {
   setRange(start, end) {
     const s = parseInt(start, 10);
     let e = parseInt(end, 10);
-
     if (s >= e) {
       e = s + 1;
     }
-
     this.startHourOffset = s;
     this.endHourOffset = e;
 
-    const url = new URL(window.location);
-    url.searchParams.set('from', s >= 0 ? `+${s}` : s);
-    url.searchParams.set('to', e >= 0 ? `+${e}` : e);
-    window.history.replaceState({}, '', url);
-
+    this.saveStateToLocalStorage();
+    this.syncUrlBar();
     this.applyFilters();
     this.host?.requestUpdate();
   }
 
   setViewType(type) {
     this.viewType = type;
+    const config = airports[this.airportCode.toLowerCase()];
+    this.startHourOffset = config.defaultFrom;
+    this.endHourOffset = config.defaultTo;
 
-    this.startHourOffset = this.defaultFrom;
-    this.endHourOffset = this.defaultTo;
+    this.saveStateToLocalStorage();
+    this.syncUrlBar();
+    this.fetchData();
+  }
 
-    const url = new URL(window.location);
-    url.searchParams.set('from', this.startHourOffset >= 0 ? `+${this.startHourOffset}` : this.startHourOffset);
-    url.searchParams.set('to', this.endHourOffset >= 0 ? `+${this.endHourOffset}` : this.endHourOffset);
+  setAirport(airportKey) {
+    const key = airportKey.toLowerCase();
+    if (!airports[key]) return;
 
-    const hash = type === 'A' ? '#/arrival' : '#/departure';
-    window.history.replaceState({}, '', `${url.pathname}${url.search}${hash}`);
-    window.dispatchEvent(new Event('hashchange'));
+    const config = airports[key];
+    this.airportCode = config.code;
+    this.startHourOffset = config.defaultFrom;
+    this.endHourOffset = config.defaultTo;
 
-    this.applyFilters();
-    this.host?.requestUpdate();
+    // Poka-yoke: If the new airport does not support domestic flights, fallback to intl
+    const hasDomestic = !!(config.apiEndpoints && config.apiEndpoints.dom_D && config.apiEndpoints.dom_A);
+    if (this.routeType === 'dom' && !hasDomestic) {
+      this.routeType = 'intl';
+    }
+
+    this.provider = ProviderFactory.createProvider(config);
+    this.hasLoaded = false;
+    this.flights = [];
+    this.filteredFlights = [];
+
+    this.saveStateToLocalStorage();
+    this.syncUrlBar();
+
+    if (this.host && typeof this.host._refreshTheme === 'function') {
+      this.host._refreshTheme();
+    }
+
+    this.fetchData();
+  }
+
+  setRouteType(routeType) {
+    this.routeType = routeType === 'dom' ? 'dom' : 'intl';
+    this.saveStateToLocalStorage();
+    this.syncUrlBar();
+    this.fetchData();
+  }
+
+  updateSettings(settings) {
+    const { airportCode, viewType, routeType, themeMode, startHourOffset, endHourOffset } = settings;
+
+    let keyChanged = false;
+    const airportKey = airportCode.toLowerCase();
+
+    if (this.airportCode.toLowerCase() !== airportKey) {
+      this.airportCode = airportCode;
+      this.provider = ProviderFactory.createProvider(airports[airportKey]);
+      keyChanged = true;
+    }
+
+    this.viewType = viewType;
+    this.routeType = routeType;
+    this.startHourOffset = startHourOffset;
+    this.endHourOffset = endHourOffset;
+
+    if (this.host) {
+      this.host.themeMode = themeMode;
+      localStorage.setItem('openfids_theme_mode', themeMode);
+      if (typeof this.host._refreshTheme === 'function') {
+        this.host._refreshTheme();
+      }
+    }
+
+    if (keyChanged) {
+      this.hasLoaded = false;
+      this.flights = [];
+      this.filteredFlights = [];
+    }
+
+    this.saveStateToLocalStorage();
+    this.syncUrlBar();
+    this.fetchData();
   }
 
   toggleAutoFlip() {
@@ -317,41 +359,22 @@ export class FlightViewModel {
     this.host?.requestUpdate();
   }
 
-  // ---------------------------------------------------------------------------
-  // Sunrise / Sunset (NOAA simplified algorithm)
-  // Taoyuan Airport: 25.0797°N, 121.2342°E, UTC+8
-  // ---------------------------------------------------------------------------
-  static TPE_LAT = 25.0797;
-  static TPE_LON = 121.2342;
-  static TPE_UTC_OFFSET = 8;
-
-  /**
-   * Returns sunrise and sunset as local decimal hours for Taipei Airport.
-   * Accurate to ±1 minute using the NOAA simplified formula.
-   * @param {Date} [date]
-   * @returns {{ sunrise: number, sunset: number }}
-   */
   getSunTimes(date = new Date()) {
     const rad = d => d * Math.PI / 180;
     const deg = r => r * 180 / Math.PI;
 
-    const { TPE_LAT: lat, TPE_LON: lon, TPE_UTC_OFFSET: utcOffset } = FlightViewModel;
+    const config = airports[this.airportCode.toLowerCase()];
+    const { lat, lon, utcOffset } = config;
 
-    // Day of year
     const start = new Date(date.getFullYear(), 0, 0);
     const dayOfYear = Math.floor((date - start) / 86_400_000);
 
-    // Solar declination
     const B = rad((360 / 365) * (dayOfYear - 81));
     const decl = rad(23.45 * Math.sin(B));
 
-    // Equation of time (minutes)
     const EoT = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
-
-    // Time correction (minutes) — longitude offset from the time-zone meridian
     const TC = 4 * (lon - 15 * utcOffset) + EoT;
 
-    // Hour angle at sunrise / sunset (degrees)
     const cosHA = -Math.tan(rad(lat)) * Math.tan(decl);
     const HA = deg(Math.acos(Math.max(-1, Math.min(1, cosHA))));
 
@@ -361,10 +384,6 @@ export class FlightViewModel {
     };
   }
 
-  /**
-   * Returns true when the current local clock is before sunrise or after sunset.
-   * @returns {boolean}
-   */
   computeAutoIsDark() {
     const now = new Date();
     const localHour = now.getHours() + now.getMinutes() / 60 + now.getSeconds() / 3600;

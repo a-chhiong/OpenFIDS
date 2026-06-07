@@ -4,14 +4,18 @@ export class FlightPagination extends LitElement {
   static properties = {
     currentPage: { type: Number },
     pageCount: { type: Number },
-    isAutoFlipEnabled: { type: Boolean }
+    flightCount: { type: Number },
+    isAutoFlipEnabled: { type: Boolean },
+    isFullscreen: { type: Boolean }
   };
 
   constructor() {
     super();
     this.currentPage = 1;
     this.pageCount = 1;
+    this.flightCount = 0;
     this.isAutoFlipEnabled = true;
+    this.isFullscreen = false;
   }
 
   _emitPage(page) {
@@ -30,31 +34,48 @@ export class FlightPagination extends LitElement {
     }));
   }
 
+  _toggleFullscreen() {
+    this.dispatchEvent(new CustomEvent('fullscreen-toggle', {
+      bubbles: true,
+      composed: true
+    }));
+  }
+
   render() {
     const pageCount = Math.max(1, this.pageCount);
     return html`
       <div class="pagination-bar" role="navigation" aria-label="flight page navigation">
-        <button @click="${() => this._emitPage(1)}" ?disabled="${this.currentPage <= 1}">⏮</button>
-        <button @click="${() => this._emitPage(this.currentPage - 1)}" ?disabled="${this.currentPage <= 1}">◀</button>
+        <div class="flight-count-display">
+          ${this.flightCount} FLIGHTS
+        </div>
 
-        <span>${this.currentPage} / ${pageCount}</span>
+        <div class="pager-controls">
+          <button @click="${() => this._emitPage(1)}" ?disabled="${this.currentPage <= 1}">⏮</button>
+          <button @click="${() => this._emitPage(this.currentPage - 1)}" ?disabled="${this.currentPage <= 1}">◀</button>
 
-        <input type="range"
-          min="1"
-          max="${pageCount}"
-          .value="${String(this.currentPage)}"
-          @input="${(e) => this._emitPage(Number(e.target.value))}"
-          aria-label="Select flight page"
-        />
+          <input type="range"
+            min="1"
+            max="${pageCount}"
+            .value="${String(this.currentPage)}"
+            @input="${(e) => this._emitPage(Number(e.target.value))}"
+            aria-label="Select flight page"
+          />
 
-        <button @click="${() => this._emitPage(this.currentPage + 1)}" ?disabled="${this.currentPage >= pageCount}">▶</button>
-        <button @click="${() => this._emitPage(pageCount)}" ?disabled="${this.currentPage >= pageCount}">⏭</button>
+          <button @click="${() => this._emitPage(this.currentPage + 1)}" ?disabled="${this.currentPage >= pageCount}">▶</button>
+          <button @click="${() => this._emitPage(pageCount)}" ?disabled="${this.currentPage >= pageCount}">⏭</button>
+          
+          <span class="page-indicator">${this.currentPage} / ${pageCount}</span>
+        </div>
 
-        <div class="divider"></div>
-
-        <button @click="${this._toggleAutoFlip}" class="autoflip-btn ${this.isAutoFlipEnabled ? 'active' : ''}" title="${this.isAutoFlipEnabled ? 'Pause Auto-flip' : 'Start Auto-flip'}">
-          ${this.isAutoFlipEnabled ? html`⏸` : html`▶`}
-        </button>
+        <div class="right-controls">
+          <div class="divider"></div>
+          <button @click="${this._toggleAutoFlip}" class="autoflip-btn ${this.isAutoFlipEnabled ? 'active' : ''}" title="${this.isAutoFlipEnabled ? 'Pause Auto-flip' : 'Start Auto-flip'}">
+            ${this.isAutoFlipEnabled ? html`⏸` : html`▶`}
+          </button>
+          <button @click="${this._toggleFullscreen}" class="fullscreen-toggle-btn ${this.isFullscreen ? 'active' : ''}" title="${this.isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}">
+            ⛶
+          </button>
+        </div>
       </div>
     `;
   }
@@ -70,17 +91,39 @@ export class FlightPagination extends LitElement {
 
     .pagination-bar {
       display: flex;
-      gap: 0.5rem;
+      justify-content: space-between;
       align-items: center;
-      padding: 0.25rem 0.5rem;
-      border-top: 1px solid rgba(0,0,0,0.08);
+      padding: 0.25rem 0.75rem;
+      border-top: 1px solid var(--fids-separator, rgba(255, 255, 255, 0.09));
       color: var(--fids-dim);
       font-size: 0.75rem;
-      flex-wrap: nowrap;
-      justify-content: center;
-      overflow-x: auto;
       background: var(--fids-surface-2);
       min-height: 38px;
+    }
+
+    .flight-count-display {
+      font-weight: 800;
+      color: var(--fids-accent, #ffcc00);
+      font-family: 'Roboto Mono', monospace;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      flex-shrink: 0;
+      min-width: 90px;
+    }
+
+    .pager-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-grow: 1;
+      justify-content: center;
+    }
+
+    .right-controls {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      gap: 0.5rem;
     }
 
     .pagination-bar button {
@@ -109,17 +152,12 @@ export class FlightPagination extends LitElement {
       transform: scale(1.1);
     }
 
-    .pagination-bar button.active {
-      background: rgba(255,255,255,0.2);
-      color: var(--fids-accent);
-    }
-
-    .pagination-bar span {
+    .page-indicator {
       display: inline-flex;
       align-items: center;
       gap: 0.3rem;
       font-weight: 700;
-      min-width: 90px;
+      min-width: 80px;
       justify-content: center;
     }
 
@@ -139,7 +177,7 @@ export class FlightPagination extends LitElement {
       flex-shrink: 0;
     }
 
-    .autoflip-btn {
+    .autoflip-btn, .fullscreen-toggle-btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -155,7 +193,7 @@ export class FlightPagination extends LitElement {
       padding: 0 !important;
     }
 
-    .autoflip-btn:hover {
+    .autoflip-btn:hover, .fullscreen-toggle-btn:hover {
       opacity: 1;
       filter: grayscale(0);
       color: var(--fids-text) !important;
@@ -163,14 +201,14 @@ export class FlightPagination extends LitElement {
       background: rgba(255, 255, 255, 0.05) !important;
     }
 
-    .autoflip-btn.active {
+    .autoflip-btn.active, .fullscreen-toggle-btn.active {
       opacity: 0.7;
       filter: grayscale(0.2);
       color: var(--fids-accent) !important;
       border-color: rgba(255, 204, 0, 0.2) !important;
     }
 
-    .autoflip-btn.active:hover {
+    .autoflip-btn.active:hover, .fullscreen-toggle-btn.active:hover {
       opacity: 1;
       filter: grayscale(0);
       border-color: var(--fids-accent) !important;
@@ -186,28 +224,41 @@ export class FlightPagination extends LitElement {
       .pagination-bar {
         font-size: 0.68rem;
         gap: 0.3rem;
-        padding: 0.35rem;
+        padding: 0.25rem 0.4rem;
+      }
+      .flight-count-display {
+        min-width: unset;
       }
       .pagination-bar button {
-        width: 28px;
-        height: 28px;
-        font-size: 0.9rem;
+        width: 26px;
+        height: 26px;
+        font-size: 0.85rem;
       }
-      .pagination-bar span { display: none; }
-      .pagination-bar input[type="range"] { max-width: 100px; }
-      .autoflip-btn { 
-        width: 28px; 
-        height: 28px; 
+      .page-indicator {
+        min-width: 50px;
       }
-      .divider { margin: 0 0.1rem; }
+      .pagination-bar input[type="range"] {
+        display: none;
+      }
+      .autoflip-btn, .fullscreen-toggle-btn {
+        width: 26px;
+        height: 26px;
+      }
+      .divider {
+        margin: 0 0.15rem;
+      }
     }
 
     @media (min-width: 1440px) {
       .pagination-bar {
         font-size: 0.85rem;
-        padding: 0.25rem 0.5rem;
+        padding: 0.25rem 0.75rem;
         min-height: 40px;
         gap: 0.4rem;
+      }
+      .flight-count-display {
+        font-size: 0.9rem;
+        min-width: 110px;
       }
       .pagination-bar button {
         width: 30px;
@@ -215,7 +266,7 @@ export class FlightPagination extends LitElement {
         font-size: 1rem;
         border-radius: 5px;
       }
-      .pagination-bar span {
+      .page-indicator {
         min-width: 110px;
       }
       .pagination-bar input[type="range"] {
@@ -224,7 +275,7 @@ export class FlightPagination extends LitElement {
       .divider {
         height: 18px;
       }
-      .autoflip-btn {
+      .autoflip-btn, .fullscreen-toggle-btn {
         width: 30px;
         height: 30px;
         border-radius: 5px !important;
@@ -238,13 +289,17 @@ export class FlightPagination extends LitElement {
         min-height: 50px;
         gap: 0.6rem;
       }
+      .flight-count-display {
+        font-size: 1.3rem;
+        min-width: 160px;
+      }
       .pagination-bar button {
         width: 38px;
         height: 38px;
         font-size: 1.2rem;
         border-radius: 6px;
       }
-      .pagination-bar span {
+      .page-indicator {
         min-width: 140px;
       }
       .pagination-bar input[type="range"] {
@@ -253,7 +308,7 @@ export class FlightPagination extends LitElement {
       .divider {
         height: 24px;
       }
-      .autoflip-btn {
+      .autoflip-btn, .fullscreen-toggle-btn {
         width: 38px;
         height: 38px;
         border-radius: 6px !important;
