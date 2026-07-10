@@ -52,5 +52,23 @@ export const airports = {
       dom_A: 'https://www.tca.gov.tw/cht/index.php?act=fids&code=domestic_a'
     },
     logoBaseUrl: 'https://www.tca.gov.tw/upload/webstyle_7_default/img/air_logo/{code}.png'
+  },
+  tsa: {
+    code: 'TSA',
+    nameZH: '臺北松山機場',
+    nameEN: 'Taipei Songshan Airport',
+    lat: 25.0697,
+    lon: 121.5528,
+    utcOffset: 8,
+    defaultFrom: -1,
+    defaultTo: 6,
+    providerType: 'TSA_JSON',
+    apiEndpoints: {
+      intl_D: 'https://www.tsa.gov.tw/api/airFlyTab/Paging',
+      intl_A: 'https://www.tsa.gov.tw/api/airFlyTab/Paging',
+      dom_D: 'https://www.tsa.gov.tw/api/airFlyTab/Paging',
+      dom_A: 'https://www.tsa.gov.tw/api/airFlyTab/Paging'
+    },
+    logoBaseUrl: 'https://www.tsa.gov.tw'
   }
 };
