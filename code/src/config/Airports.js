@@ -34,5 +34,23 @@ export const airports = {
       dom_A: 'https://www.kia.gov.tw/Announce/NewsArea/InstantSchedule_DOMARR.json'
     },
     logoBaseUrl: 'https://www.kia.gov.tw/images/ALL-square/{code}.png'
+  },
+  rmq: {
+    code: 'RMQ',
+    nameZH: '臺中國際機場',
+    nameEN: 'Taichung International Airport',
+    lat: 24.2647,
+    lon: 120.6205,
+    utcOffset: 8,
+    defaultFrom: -1,
+    defaultTo: 6,
+    providerType: 'RMQ_JSON',
+    apiEndpoints: {
+      intl_D: 'https://www.tca.gov.tw/cht/index.php?act=fids&code=international_l',
+      intl_A: 'https://www.tca.gov.tw/cht/index.php?act=fids&code=international_a',
+      dom_D: 'https://www.tca.gov.tw/cht/index.php?act=fids&code=domestic_l',
+      dom_A: 'https://www.tca.gov.tw/cht/index.php?act=fids&code=domestic_a'
+    },
+    logoBaseUrl: 'https://www.tca.gov.tw/upload/webstyle_7_default/img/air_logo/{code}.png'
   }
 };

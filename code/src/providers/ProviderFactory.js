@@ -1,5 +1,6 @@
 import { TpeDataProvider } from './TpeDataProvider.js';
 import { KhhDataProvider } from './KhhDataProvider.js';
+import { RmqDataProvider } from './RmqDataProvider.js';
 
 export class ProviderFactory {
   /**
@@ -17,6 +18,8 @@ export class ProviderFactory {
         return new TpeDataProvider(airportConfig);
       case 'KHH_JSON':
         return new KhhDataProvider(airportConfig);
+      case 'RMQ_JSON':
+        return new RmqDataProvider(airportConfig);
       default:
         throw new Error(`Unsupported provider type: ${airportConfig.providerType}`);
     }

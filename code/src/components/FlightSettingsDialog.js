@@ -12,7 +12,7 @@ export class FlightSettingsDialog extends LitElement {
     viewType: { type: String }, // 'D' | 'A'
     startHourOffset: { type: Number },
     endHourOffset: { type: Number },
-    airportCode: { type: String }, // 'TPE' | 'KHH'
+    airportCode: { type: String }, // 'TPE' | 'KHH' | 'RMQ'
     routeType: { type: String }, // 'intl' | 'dom'
     themeMode: { type: String }, // 'dark' | 'light' | 'auto'
     
