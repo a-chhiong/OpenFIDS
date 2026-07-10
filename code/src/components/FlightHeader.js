@@ -155,15 +155,15 @@ export class FlightHeader extends LitElement {
     }
 
     .route-badge.departure {
-      background: rgba(255, 204, 0, 0.1);
-      color: var(--fids-accent, #ffcc00);
-      border: 1px solid var(--fids-accent, #ffcc00);
+      background: rgba(249, 115, 22, 0.18);
+      color: #fb923c;
+      border: 1px solid rgba(249, 115, 22, 0.45);
     }
 
     .route-badge.arrival {
-      background: rgba(16, 185, 129, 0.1);
-      color: var(--fids-accent, #ffcc00);
-      border: 1px solid var(--fids-accent, #ffcc00);
+      background: rgba(59, 130, 246, 0.18);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.45);
     }
 
     .header-right {
