@@ -23,6 +23,7 @@ export class TsaDataProvider extends FlightDataProvider {
       data = JSON.parse(jsonText);
     } catch (e) {
       console.error('Failed to parse TSA JSON:', e);
+      console.error('Raw response text:', jsonText.substring(0, 500));
       return [];
     }
 
@@ -114,7 +115,7 @@ export class TsaDataProvider extends FlightDataProvider {
         const destParsed = viewType === 'D' ? parseAirport(targetAirportRaw) : { nameZH: '臺北', iata: 'TSA' };
         const originParsed = viewType === 'D' ? { nameZH: '臺北', iata: 'TSA' } : parseAirport(targetAirportRaw);
 
-        // --- Airline Logo from ImagePath (relative path → full URL) ---
+        // --- Airline Logo from ImagePath (relative path => full URL) ---
         const imagePath = item.ImagePath || '';
         const airlineLogo = imagePath
           ? `https://www.tsa.gov.tw${imagePath}`
@@ -188,57 +189,108 @@ export class TsaDataProvider extends FlightDataProvider {
   }
 
   /**
-   * Sends a POST request through CORS proxies.
-   * The TSA API only accepts POST, not GET.
-   * @param {string} url - The target API URL
+   * Sends a POST request to the TSA API, attempting multiple strategies
+   * to bypass CORS restrictions.
+   *
+   * @param {string} url - The target API URL (full https://www.tsa.gov.tw URL)
    * @param {Object} body - JSON request body
    * @returns {Promise<string>} Response text
    */
   async _postThroughProxy(url, body) {
-    // corsproxy.io: send POST with JSON body directly to proxy
-    // allorigins.win: send POST with JSON body directly to proxy
-    const proxies = [
-      {
-        url: `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
-        mode: 'binary',
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      },
-      {
-        url: `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
-        mode: 'json',
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      },
-    ];
+    const jsonBody = JSON.stringify(body);
 
-    let lastError = null;
-    for (const proxy of proxies) {
-      try {
-        const response = await fetch(proxy.url, {
-          method: proxy.method,
-          headers: proxy.headers,
-          body: proxy.body
+    // Strategy 1: If running under Vite dev server, use the same-origin proxy path.
+    try {
+      if (this._isViteDev()) {
+        const proxyUrl = new URL(url).pathname;
+        console.log('[TSA] Vite dev detected, proxying through:', proxyUrl);
+        const response = await fetch(proxyUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: jsonBody
         });
-        if (!response.ok) throw new Error(`Status ${response.status}`);
-
-        if (proxy.mode === 'json') {
-          const json = await response.json();
-          if (!json?.contents) throw new Error('Empty contents from allorigins');
-          return json.contents;
-        } else {
-          const buffer = await response.arrayBuffer();
-          const decoder = new TextDecoder('utf-8');
-          return decoder.decode(buffer);
+        if (response.ok) {
+          const text = await response.text();
+          console.log('[TSA] Vite proxy response (first 100 chars):', text.substring(0, 100));
+          return text;
         }
-      } catch (err) {
-        console.warn(`TSA proxy failed (${proxy.url}):`, err.message);
-        lastError = err;
+        console.warn('TSA Vite proxy returned status', response.status, 'falling back...');
       }
+    } catch (err) {
+      console.warn('TSA Vite proxy failed:', err.message);
     }
-    throw lastError || new Error('All proxies failed for TSA POST API');
+
+    // Strategy 2: Direct POST to the TSA API (no proxy).
+    // The API returns Access-Control-Allow-Origin: * which should permit CORS.
+    try {
+      console.log('[TSA] Trying direct POST to:', url);
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: jsonBody
+      });
+      if (response.ok) {
+        const text = await response.text();
+        console.log('[TSA] Direct POST succeeded, first 100 chars:', text.substring(0, 100));
+        return text;
+      }
+    } catch (err) {
+      console.warn('TSA direct POST failed:', err.message);
+    }
+
+    // Strategy 3: allorigins.win/raw
+    try {
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+      console.log('[TSA] Trying allorigins/raw...');
+      const response = await fetch(proxyUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: jsonBody
+      });
+      if (response.ok) {
+        const text = await response.text();
+        console.log('[TSA] allorigins/raw succeeded');
+        return text;
+      }
+    } catch (err) {
+      console.warn('TSA allorigins/raw failed:', err.message);
+    }
+
+    // Strategy 4: corsproxy.io
+    try {
+      const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(url)}`;
+      console.log('[TSA] Trying corsproxy.io...');
+      const response = await fetch(proxyUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: jsonBody
+      });
+      if (response.ok) {
+        const text = await response.text();
+        console.log('[TSA] corsproxy.io succeeded');
+        return text;
+      }
+    } catch (err) {
+      console.warn('TSA corsproxy.io failed:', err.message);
+    }
+
+    throw new Error('All proxy strategies failed for TSA POST API');
+  }
+
+  /**
+   * Detects if the app is running under Vite dev server.
+   * @returns {boolean}
+   */
+  _isViteDev() {
+    try {
+      const port = window.location.port;
+      const hostname = window.location.hostname;
+      const isDev = hostname === 'localhost' || hostname === '127.0.0.1';
+      console.log('[TSA] _isViteDev check:', { hostname, port, isDev });
+      return isDev;
+    } catch {
+      return false;
+    }
   }
 
   /**
