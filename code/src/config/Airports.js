@@ -64,10 +64,12 @@ export const airports = {
     defaultTo: 6,
     providerType: 'TSA_JSON',
     apiEndpoints: {
-      intl_D: 'https://www.tsa.gov.tw/api/airFlyTab/Paging',
-      intl_A: 'https://www.tsa.gov.tw/api/airFlyTab/Paging',
-      dom_D: 'https://www.tsa.gov.tw/api/airFlyTab/Paging',
-      dom_A: 'https://www.tsa.gov.tw/api/airFlyTab/Paging'
+      // Public Open Data API (GET-based, CORS-friendly)
+      // https://data.gov.tw/dataset/37242,37248,37317,37319
+      intl_D: 'https://www.tsa.gov.tw/api/publicDataArea/GetFormaterData?id=42879f51-f47f-4d26-8b2b-5535c652cbde',
+      intl_A: 'https://www.tsa.gov.tw/api/publicDataArea/GetFormaterData?id=7dc1379a-9485-4491-866d-fc4f9590ffcf',
+      dom_D: 'https://www.tsa.gov.tw/api/publicDataArea/GetFormaterData?id=c0f7d5b4-ba73-46d2-8485-6595c64c4e17',
+      dom_A: 'https://www.tsa.gov.tw/api/publicDataArea/GetFormaterData?id=3057d52f-7a71-49e1-a0d4-87ffa3449a6a'
     },
     logoBaseUrl: 'https://www.tsa.gov.tw'
   }
