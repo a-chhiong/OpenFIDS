@@ -94,7 +94,6 @@ export class TsaDataProvider extends FlightDataProvider {
     const now = new Date();
     const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
     const localTimeAtAirport = new Date(utc + (3600000 * this.config.utcOffset));
-    const airportHour = localTimeAtAirport.getHours();
 
     const formatDate = (date) => {
       if (!date) return '';
@@ -116,7 +115,15 @@ export class TsaDataProvider extends FlightDataProvider {
       if (!mmdd || mmdd.length < 4) return null;
       const month = parseInt(mmdd.substring(0, 2), 10) - 1;
       const day = parseInt(mmdd.substring(2, 4), 10);
-      return new Date(localTimeAtAirport.getFullYear(), month, day);
+      let year = localTimeAtAirport.getFullYear();
+      
+      // Handle year-crossing boundary
+      if (localTimeAtAirport.getMonth() === 11 && month === 0) {
+        year += 1;
+      } else if (localTimeAtAirport.getMonth() === 0 && month === 11) {
+        year -= 1;
+      }
+      return new Date(year, month, day);
     };
 
     const result = [];
@@ -133,14 +140,6 @@ export class TsaDataProvider extends FlightDataProvider {
       const flightDateStr = formatDate(flightDate);
       const scheduledDateTime = new Date(`${flightDateStr}T${scheduledTimeDisplay}`);
 
-      // Day-crossing adjustment for late-night / early-morning flights
-      const flightHour = parseInt(scheduledTime.substring(0, 2), 10);
-      if (airportHour >= 18 && flightHour <= 6) {
-        scheduledDateTime.setDate(scheduledDateTime.getDate() + 1);
-      } else if (airportHour <= 6 && flightHour >= 18) {
-        scheduledDateTime.setDate(scheduledDateTime.getDate() - 1);
-      }
-
       // Estimated / real time
       const realTime = viewType === 'D'
         ? (item.RealDepartureTime || '')
@@ -149,10 +148,11 @@ export class TsaDataProvider extends FlightDataProvider {
       let estimatedDateTime = null;
       if (realTime && realTime.trim() && realTime !== scheduledTime) {
         estimatedDateTime = new Date(`${flightDateStr}T${realTimeDisplay}`);
+        const scheduledHour = parseInt(scheduledTime.substring(0, 2), 10);
         const realHour = parseInt(realTime.substring(0, 2), 10);
-        if (airportHour >= 18 && realHour <= 6) {
+        if (scheduledHour >= 18 && realHour <= 6) {
           estimatedDateTime.setDate(estimatedDateTime.getDate() + 1);
-        } else if (airportHour <= 6 && realHour >= 18) {
+        } else if (scheduledHour <= 6 && realHour >= 18) {
           estimatedDateTime.setDate(estimatedDateTime.getDate() - 1);
         }
       }
@@ -172,6 +172,9 @@ export class TsaDataProvider extends FlightDataProvider {
       const destIATA = item.GoalAirportCode || '';
       const destNameZH = item.GoalAirportName || '';
 
+      const targetAirportCode = viewType === 'D' ? destIATA : originIATA;
+      const targetAirportName = viewType === 'D' ? destNameZH : originNameZH;
+
       // Gate
       const gate = item.AirBoardingGate || '';
 
@@ -189,12 +192,12 @@ export class TsaDataProvider extends FlightDataProvider {
         scheduledTime: scheduledTimeDisplay,
         estimatedDate: estimatedDateTime ? formatDate(estimatedDateTime) : formatDate(scheduledDateTime),
         estimatedTime: realTimeDisplay,
-        destinationIATA: viewType === 'D' ? destIATA : originIATA,
-        originIATA: viewType === 'D' ? originIATA : destIATA,
-        destinationZH: viewType === 'D' ? destNameZH : '',
-        originZH: viewType === 'D' ? '' : destNameZH,
-        destinationEN: '',
-        originEN: '',
+        destinationIATA: viewType === 'D' ? targetAirportCode : 'TSA',
+        originIATA: viewType === 'D' ? 'TSA' : targetAirportCode,
+        destinationZH: viewType === 'D' ? targetAirportName : '台北',
+        originZH: viewType === 'D' ? '台北' : targetAirportName,
+        destinationEN: viewType === 'D' ? '' : 'Taipei',
+        originEN: viewType === 'D' ? 'Taipei' : '',
         flightStatus: item.AirFlyStatus || '',
         aircraftType: item.AirPlaneType || '',
         viaIATA: '',

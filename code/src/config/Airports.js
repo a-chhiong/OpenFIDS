@@ -71,6 +71,6 @@ export const airports = {
       dom_D: 'https://www.tsa.gov.tw/api/publicDataArea/GetFormaterData?id=c0f7d5b4-ba73-46d2-8485-6595c64c4e17',
       dom_A: 'https://www.tsa.gov.tw/api/publicDataArea/GetFormaterData?id=3057d52f-7a71-49e1-a0d4-87ffa3449a6a'
     },
-    logoBaseUrl: 'https://www.tsa.gov.tw'
+    logoBaseUrl: ''
   }
 };
