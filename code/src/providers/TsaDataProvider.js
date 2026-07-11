@@ -206,7 +206,7 @@ export class TsaDataProvider extends FlightDataProvider {
         checkInCounter: (item.CheckInCount || '').trim() || '-',
         statusZH: statusZH || '-',
         statusEN: statusEN || '-',
-        airlineLogo: '',
+        airlineLogo: this.getAirlineLogo(airlineIATA || item.AirLineCode || ''),
         // Store raw FlightNumber for the filter in FlightViewModel
         rawFlightNumber,
       };

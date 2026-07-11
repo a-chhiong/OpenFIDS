@@ -4,6 +4,22 @@ export class FlightDataProvider {
   }
 
   /**
+   * Resolves the logo URL for a given airline code.
+   * If the airport configuration does not provide a logoBaseUrl,
+   * falls back to the iata-airelines-logos repository.
+   * @param {string} code - The airline IATA/ICAO code
+   * @returns {string} Logo URL
+   */
+  getAirlineLogo(code) {
+    if (!code || code === '-') return '';
+    const baseUrl = this.config.logoBaseUrl;
+    if (!baseUrl) {
+      return `https://raw.githubusercontent.com/urbullet/iata-airelines-logos/master/scripts/airlines-logos/${code.toUpperCase()}.png`;
+    }
+    return baseUrl.replace('{code}', code);
+  }
+
+  /**
    * Abstract method to fetch and parse flights.
    * @param {string} routeType - 'intl' | 'dom'
    * @param {string} viewType - 'D' | 'A'

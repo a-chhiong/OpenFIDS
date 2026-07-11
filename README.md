@@ -11,6 +11,7 @@
   - **TPE** — 臺灣桃園國際機場 (Taiwan Taoyuan International Airport)
   - **KHH** — 高雄國際機場 (Kaohsiung International Airport)
   - **RMQ** — 臺中國際機場 (Taichung International Airport)
+  - **TSA** — 臺北松山機場 (Taipei Songshan Airport)
 - **Departures & Arrivals** — Toggle between departure and arrival views
 - **International & Domestic** — Supports both international and domestic flights where available
 - **Auto-pagination** — Automatically flips pages on configurable interval; perfectly fits rows to screen height
@@ -18,6 +19,7 @@
 - **Full-screen mode** — Native browser fullscreen API for dedicated displays
 - **Responsive design** — Adapts from mobile portrait to 4K TV landscape layouts
 - **CORS proxy fallback** — Multiple proxy chains to bypass airport server restrictions
+- **Airline logo fallback** — Automatically falls back to resolving airline logos via the public `iata-airelines-logos` repository if an airport lacks `logoBaseUrl`
 - **URL-persistent state** — Airport, view type, route, time range, and theme are preserved in URL and localStorage
 
 ---
@@ -48,7 +50,8 @@ flowchart TD
         TpeDataProvider["TpeDataProvider.js<br/>CSV parser (Big5)"]
         KhhDataProvider["KhhDataProvider.js<br/>JSON parser"]
         RmqDataProvider["RmqDataProvider.js<br/>JSON parser"]
-        FlightDataProvider["FlightDataProvider.js<br/>Abstract base + proxy fetch"]
+        TsaDataProvider["TsaDataProvider.js<br/>JSON parser with dynamic GUID"]
+        FlightDataProvider["FlightDataProvider.js<br/>Abstract base + logo resolution"]
     end
 
     subgraph Config
@@ -117,6 +120,7 @@ code/
 | Taiwan Taoyuan | TPE | `TPE_CSV` | CSV (Big5) | Single URL for all flights |
 | Kaohsiung | KHH | `KHH_JSON` | JSON | 4 URLs (intl_A, intl_D, dom_A, dom_D) |
 | Taichung | RMQ | `RMQ_JSON` | JSON | 4 URLs (intl_A, intl_D, dom_A, dom_D) |
+| Taipei Songshan | TSA | `TSA_JSON` | JSON | 4 URLs with dynamic GUID resolution |
 
 API specifications are documented under [`docs/`](docs/):
 
@@ -125,6 +129,7 @@ API specifications are documented under [`docs/`](docs/):
 | [`docs/tpe_spec.md`](docs/tpe_spec.md) | 臺灣桃園國際機場 (TPE) | [Taoyuan Airport Flight Info](https://www.taoyuan-airport.com/flights) |
 | [`docs/kia_spec.md`](docs/kia_spec.md) | 高雄國際機場 (KHH) | [KIA Open Data](https://www.kia.gov.tw/opendata.html) |
 | [`docs/tca_spec.md`](docs/tca_spec.md) | 臺中國際機場 (RMQ) | [TCA Open Data](https://www.tca.gov.tw/cht/index.php?code=list&ids=407) |
+| [`docs/tsa_spec.md`](docs/tsa_spec.md) | 臺北松山機場 (TSA) | [Taipei Songshan Airport Open Data](https://data.gov.tw/dataset/37242) |
 
 ### Provider Pattern
 
@@ -133,15 +138,18 @@ Each airport implements a **concrete provider** that extends [`FlightDataProvide
 - [`TpeDataProvider`](code/src/providers/TpeDataProvider.js) — Parses a single Big5-encoded CSV file (22 fields per row) shared by all routes/view types
 - [`KhhDataProvider`](code/src/providers/KhhDataProvider.js) — Parses 4 separate JSON endpoints; handles midnight crossing, bilingual airport names, and dynamic date assignment
 - [`RmqDataProvider`](code/src/providers/RmqDataProvider.js) — Parses TCA's `InstantSchedule` JSON structure; similar midnight-crossing and bilingual logic to KHH
+- [`TsaDataProvider`](code/src/providers/TsaDataProvider.js) — Parses Taipei Songshan Airport's JSON endpoints; supports dynamic GUID resolution from data.gov.tw and fallback mappings
 
 All providers normalize data into the [`FlightInfo`](code/src/models/FlightInfo.js) model and are instantiated by [`ProviderFactory`](code/src/providers/ProviderFactory.js) based on the `providerType` field in [`Airports.js`](code/src/config/Airports.js).
 
-### CORS Proxy Chain
+### CORS Proxy Chain & Airline Logo Fallbacks
 
-Airport servers often block cross-origin requests from browsers. [`FlightDataProvider.fetchThroughProxy()`](code/src/providers/FlightDataProvider.js:23) handles this with a fallback chain:
+Airport servers often block cross-origin requests from browsers. [`FlightDataProvider.fetchThroughProxy()`](code/src/providers/FlightDataProvider.js:39) handles this with a fallback chain:
 
 1. `corsproxy.io` — Binary mode, fetches as `arrayBuffer` then decodes with specified encoding
 2. `api.allorigins.win` — JSON wrapper mode, extracts `.contents`
+
+Additionally, if the airport configuration does not specify a `logoBaseUrl` (such as `TSA`), the base `FlightDataProvider.getAirlineLogo()` method automatically falls back to fetching high-quality PNG logos from the **[urbullet/iata-airelines-logos](https://github.com/urbullet/iata-airelines-logos)** GitHub repository based on the airline's 2-letter IATA code.
 
 If all proxies fail, the error is surfaced in the UI via `FlightAlert`.
 

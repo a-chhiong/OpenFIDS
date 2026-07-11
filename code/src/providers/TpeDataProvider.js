@@ -22,9 +22,7 @@ export class TpeDataProvider extends FlightDataProvider {
         const airlineCode = row[2]?.trim() || '';
         
         // Resolve logo url using lowercase code
-        const airlineLogo = airlineCode
-          ? this.config.logoBaseUrl.replace('{code}', airlineCode.toLowerCase())
-          : '';
+        const airlineLogo = this.getAirlineLogo(airlineCode ? airlineCode.toLowerCase() : '');
 
         const props = {
           terminal: row[0],

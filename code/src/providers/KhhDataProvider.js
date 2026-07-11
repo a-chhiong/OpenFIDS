@@ -80,9 +80,7 @@ export class KhhDataProvider extends FlightDataProvider {
         const flightNumber = rawAirlineNum.substring(2).trim();
 
         // Resolve logo url using uppercase code (e.g. IT.png)
-        const airlineLogo = airlineCode
-          ? this.config.logoBaseUrl.replace('{code}', airlineCode)
-          : '';
+        const airlineLogo = this.getAirlineLogo(airlineCode);
 
         // Handle bilingual airport names (separated by / if present)
         const targetAirportName = viewType === 'D'

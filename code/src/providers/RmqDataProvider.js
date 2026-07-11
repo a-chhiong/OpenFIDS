@@ -97,9 +97,7 @@ export class RmqDataProvider extends FlightDataProvider {
         // Strip the extension since logoBaseUrl already includes it
         const airLineimg = item.airLineimg || '';
         const logoCode = airLineimg.replace(/\.\w+$/, '');
-        const airlineLogo = logoCode
-          ? this.config.logoBaseUrl.replace('{code}', logoCode)
-          : '';
+        const airlineLogo = this.getAirlineLogo(logoCode);
 
         // Handle bilingual airport names (separated by / if present, though RMQ mostly uses Chinese)
         const targetAirportName = viewType === 'D'
