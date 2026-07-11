@@ -1,48 +1,33 @@
 import { FlightDataProvider } from './FlightDataProvider.js';
 import { FlightInfo } from '../models/FlightInfo.js';
 
-/**
- * Maps airline short names (from public API) to full names.
- * The public API returns 2-char short names (e.g. "華信"), we expand
- * them for consistency with the other providers' format.
- */
-const SHORT_TO_FULL = {
-  '華信': '華信航空公司',
-  '立榮': '立榮航空公司',
-  '長榮': '長榮航空公司',
-  '華航': '中華航空公司',
-  '全日空': '全日本空輸',
-  '日航': '日本航空公司',
-  '東航': '中國東方航空公司',
-  '上航': '上海航空公司',
-  '國航': '中國國際航空公司',
-  '廈航': '廈門航空公司',
-  '德威': '德威航空公司',
-  '川航': '四川航空公司',
-  '酷航': '酷航',
-  '越捷': '越捷航空',
-  '韓亞': '韓亞航空公司',
-  '高爾': '高爾航空',
-  '馬亞洲': '馬來西亞亞洲航空',
-  '菲航': '菲律賓航空',
-  '汶萊': '汶萊皇家航空',
-  '聯合航空': '聯合航空',
-  '南方航空': '中國南方航空',
-  '青島航空': '青島航空',
-  '捷星': '捷星日本航空',
-  '法國航空': '法國航空',
-  '荷蘭皇家航空': '荷蘭皇家航空',
-  '紐西蘭航空': '紐西蘭航空',
-  '新加坡航空': '新加坡航空',
-  '大韓航空': '大韓航空',
-  '韓進': '韓進航空',
-  '海南航空': '海南航空',
-  '深圳航空': '深圳航空',
-  '吉祥航空': '吉祥航空',
-  '春秋航空': '春秋航空',
+const TSA_METADATA = {
+  intl_D: { datasetId: '37242', fallbackGuid: '42879f51-f47f-4d26-8b2b-5535c652cbde' },
+  intl_A: { datasetId: '37248', fallbackGuid: '7dc1379a-9485-4491-866d-fc4f9590ffcf' },
+  dom_D: { datasetId: '37317', fallbackGuid: 'c0f7d5b4-ba73-46d2-8485-6595c64c4e17' },
+  dom_A: { datasetId: '37319', fallbackGuid: '3057d52f-7a71-49e1-a0d4-87ffa3449a6a' }
 };
 
 export class TsaDataProvider extends FlightDataProvider {
+  /**
+   * Resolves the latest GUID from data.gov.tw for a given dataset ID.
+   * @param {string} datasetId
+   * @returns {Promise<string|null>} Resolved GUID or null if failed
+   */
+  async _resolveGuid(datasetId) {
+    const datasetUrl = `https://data.gov.tw/dataset/${datasetId}`;
+    try {
+      const html = await this.fetchThroughProxy(datasetUrl);
+      const match = html.match(/GetFormaterData\?id=([a-f0-9-]+)/);
+      if (match && match[1]) {
+        return match[1];
+      }
+    } catch (err) {
+      console.warn(`Failed to resolve dynamic TSA GUID for dataset ${datasetId}:`, err);
+    }
+    return null;
+  }
+
   /**
    * Fetches and parses flights for TSA (Taipei Songshan Airport).
    * Uses the public Open Data API (GET-based, CORS-friendly).
@@ -51,8 +36,23 @@ export class TsaDataProvider extends FlightDataProvider {
    * @returns {Promise<FlightInfo[]>}
    */
   async fetchFlights(routeType, viewType) {
-    const url = this.config.apiEndpoints[`${routeType}_${viewType}`];
-    if (!url) return [];
+    const key = `${routeType}_${viewType}`;
+    const template = this.config.apiEndpoints[key];
+    if (!template) return [];
+
+    let url = template;
+    if (template.includes('{query_param}')) {
+      const meta = TSA_METADATA[key];
+      let guid = null;
+      if (meta && meta.datasetId) {
+        guid = await this._resolveGuid(meta.datasetId);
+      }
+      if (!guid) {
+        guid = meta ? meta.fallbackGuid : '';
+        console.log(`[TSA] Using fallback GUID for ${key}: ${guid}`);
+      }
+      url = template.replace('{query_param}', `id=${guid}`);
+    }
 
     // Try direct GET first — the public API returns
     // Access-Control-Allow-Origin: * so CORS may permit it.
@@ -162,9 +162,8 @@ export class TsaDataProvider extends FlightDataProvider {
       const airlineNum = (item.AirLineNum || '').trim();
       const rawFlightNumber = airlineIATA && airlineNum ? `${airlineIATA}${airlineNum}` : '';
 
-      // Airline name (expand short name to full)
-      const shortName = (item.AirLineName || '').trim();
-      const airlineNameZH = SHORT_TO_FULL[shortName] || shortName;
+      // Airline name (honor upstream name, fall back to '-' if missing)
+      const airlineNameZH = (item.AirLineName || '').trim() || '-';
 
       // Airport names
       const originIATA = item.UpAirportCode || '';
@@ -176,7 +175,7 @@ export class TsaDataProvider extends FlightDataProvider {
       const targetAirportName = viewType === 'D' ? destNameZH : originNameZH;
 
       // Gate
-      const gate = item.AirBoardingGate || '';
+      const gate = (item.AirBoardingGate || '').trim() || '-';
 
       // Status
       const { statusZH, statusEN } = this._splitStatus(item.AirFlyStatus || '');
@@ -184,29 +183,29 @@ export class TsaDataProvider extends FlightDataProvider {
       const props = {
         terminal: routeType === 'intl' ? 'INT' : 'DOM',
         type: viewType,
-        airlineCode: airlineIATA || (item.AirLineCode || ''),
+        airlineCode: (airlineIATA || item.AirLineCode || '').trim() || '-',
         airlineNameZH,
         flightNumber: airlineNum || rawFlightNumber,
         gate,
         scheduledDate: formatDate(scheduledDateTime),
         scheduledTime: scheduledTimeDisplay,
         estimatedDate: estimatedDateTime ? formatDate(estimatedDateTime) : formatDate(scheduledDateTime),
-        estimatedTime: realTimeDisplay,
-        destinationIATA: viewType === 'D' ? targetAirportCode : 'TSA',
-        originIATA: viewType === 'D' ? 'TSA' : targetAirportCode,
-        destinationZH: viewType === 'D' ? targetAirportName : '台北',
-        originZH: viewType === 'D' ? '台北' : targetAirportName,
+        estimatedTime: realTimeDisplay || '-',
+        destinationIATA: viewType === 'D' ? (targetAirportCode || '-') : 'TSA',
+        originIATA: viewType === 'D' ? 'TSA' : (targetAirportCode || '-'),
+        destinationZH: viewType === 'D' ? (targetAirportName || '-') : '台北',
+        originZH: viewType === 'D' ? '台北' : (targetAirportName || '-'),
         destinationEN: viewType === 'D' ? '' : 'Taipei',
         originEN: viewType === 'D' ? 'Taipei' : '',
-        flightStatus: item.AirFlyStatus || '',
-        aircraftType: item.AirPlaneType || '',
+        flightStatus: (item.AirFlyStatus || '').trim() || '-',
+        aircraftType: (item.AirPlaneType || '').trim() || '-',
         viaIATA: '',
         viaEN: '',
         viaZH: '',
         baggageCarousel: '',
-        checkInCounter: item.CheckInCount || '',
-        statusZH,
-        statusEN,
+        checkInCounter: (item.CheckInCount || '').trim() || '-',
+        statusZH: statusZH || '-',
+        statusEN: statusEN || '-',
         airlineLogo: '',
         // Store raw FlightNumber for the filter in FlightViewModel
         rawFlightNumber,
