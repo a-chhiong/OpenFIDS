@@ -12,6 +12,7 @@
   - **KHH** — 高雄國際機場 (Kaohsiung International Airport)
   - **RMQ** — 臺中國際機場 (Taichung International Airport)
   - **TSA** — 臺北松山機場 (Taipei Songshan Airport)
+  - **Other Regional Airports (TDX Fallback)** — MZG (Penghu), KNH (Kinmen), TNN (Tainan), TTT (Taitung), HUN (Hualien), LZN/MFK (Matsu), CYI (Chiayi), HCN (Hengchun), GDO (Green Island), KYD (Lanyu), CMJ (Qimei), WOT (Wang-an)
 - **Departures & Arrivals** — Toggle between departure and arrival views
 - **International & Domestic** — Supports both international and domestic flights where available
 - **Auto-pagination** — Automatically flips pages on configurable interval; perfectly fits rows to screen height
@@ -121,6 +122,7 @@ code/
 | Kaohsiung | KHH | `KHH_JSON` | JSON | 4 URLs (intl_A, intl_D, dom_A, dom_D) |
 | Taichung | RMQ | `RMQ_JSON` | JSON | 4 URLs (intl_A, intl_D, dom_A, dom_D) |
 | Taipei Songshan | TSA | `TSA_JSON` | JSON | 4 URLs with dynamic GUID resolution |
+| Other Regional Airports | MZG, KNH, TNN, TTT, HUN, LZN, MFK, CYI, HCN, GDO, KYD, CMJ, WOT | `TDX` | JSON | TDX Flight Information Display System (FIDS) API |
 
 API specifications are documented under [`docs/`](docs/):
 
@@ -130,6 +132,8 @@ API specifications are documented under [`docs/`](docs/):
 | [`docs/kia_spec.md`](docs/kia_spec.md) | 高雄國際機場 (KHH) | [KIA Open Data](https://www.kia.gov.tw/opendata.html) |
 | [`docs/tca_spec.md`](docs/tca_spec.md) | 臺中國際機場 (RMQ) | [TCA Open Data](https://www.tca.gov.tw/cht/index.php?code=list&ids=407) |
 | [`docs/tsa_spec.md`](docs/tsa_spec.md) | 臺北松山機場 (TSA) | [Taipei Songshan Airport Open Data](https://data.gov.tw/dataset/37242) |
+| *N/A* (TDX Fallback) | All other domestic/regional airports | [TDX Portal FIDS API](https://tdx.transportdata.tw/) <br> Metadata coordinates & names sourced from [CAA AIP / AIS](https://ais.caa.gov.tw/) and [CAA Website](https://www.caa.gov.tw/) |
+
 
 ### Provider Pattern
 

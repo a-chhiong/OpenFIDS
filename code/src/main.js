@@ -1,4 +1,4 @@
-import './assets/style.css';
+import './style.css';
 import './views/FlightView.js';
 
 import './components/FlightTable.js';
@@ -10,7 +10,7 @@ import './components/FlightMarquee.js';
 
 window.addEventListener('DOMContentLoaded', () => {
   document.body.classList.add('loaded');
-  
+
   const root = document.getElementById('root');
   if (root) {
     root.innerHTML = '<flight-view></flight-view>';

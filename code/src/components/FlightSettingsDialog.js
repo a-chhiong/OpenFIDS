@@ -4,6 +4,7 @@ import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/compone
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/components/option/option.js';
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/components/button/button.js';
 import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/components/icon/icon.js';
+import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/components/input/input.js';
 import { airports } from '../config/Airports.js';
 
 export class FlightSettingsDialog extends LitElement {
@@ -22,7 +23,9 @@ export class FlightSettingsDialog extends LitElement {
     _draftRouteType: { state: true },
     _draftThemeMode: { state: true },
     _draftStartHourOffset: { state: true },
-    _draftEndHourOffset: { state: true }
+    _draftEndHourOffset: { state: true },
+    _draftTdxClientId: { state: true },
+    _draftTdxClientSecret: { state: true }
   };
 
   static styles = css`
@@ -109,6 +112,8 @@ export class FlightSettingsDialog extends LitElement {
       this._draftThemeMode = this.themeMode;
       this._draftStartHourOffset = this.startHourOffset;
       this._draftEndHourOffset = this.endHourOffset;
+      this._draftTdxClientId = localStorage.getItem('openfids_tdx_client_id') || '';
+      this._draftTdxClientSecret = localStorage.getItem('openfids_tdx_client_secret') || '';
     }
   }
 
@@ -116,6 +121,7 @@ export class FlightSettingsDialog extends LitElement {
     const activeAirportKey = this._draftAirportCode?.toLowerCase() || 'tpe';
     const config = airports[activeAirportKey];
     const hasDomestic = !!(config && config.apiEndpoints && config.apiEndpoints.dom_D && config.apiEndpoints.dom_A);
+    const hasIntl = !!(config && config.apiEndpoints && (config.apiEndpoints.intl_D || config.apiEndpoints.intl_A));
 
     return html`
       <sl-dialog 
@@ -156,7 +162,7 @@ export class FlightSettingsDialog extends LitElement {
               .value="${this._draftRouteType || 'intl'}" 
               @sl-change=${this._handleRouteTypeChange}
             >
-              <sl-option value="intl">INTL. / 國際線</sl-option>
+              <sl-option value="intl" ?disabled=${!hasIntl}>INTL. / 國際線</sl-option>
               <sl-option value="dom" ?disabled=${!hasDomestic}>DOME. / 國內線</sl-option>
             </sl-select>
           </div>
@@ -197,6 +203,34 @@ export class FlightSettingsDialog extends LitElement {
             </div>
           </div>
 
+          <!-- TDX Credentials section (Optional) -->
+          <div class="form-group full-width" style="margin-top: 0.5rem; border-top: 1px solid var(--fids-separator, rgba(255, 255, 255, 0.09)); padding-top: 1rem;">
+            <label style="color: var(--fids-accent, #ffcc00); font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem;">
+              TDX API Credentials (Optional / 提升限額)
+            </label>
+            <p style="font-size: 0.72rem; color: var(--fids-dim, #94a3b8); margin: 0 0 0.75rem 0; line-height: 1.3;">
+              To lift the 20-req/day guest limit, enter your client keys from <a href="https://tdx.transportdata.tw/" target="_blank" style="color: var(--fids-accent, #ffcc00); text-decoration: underline;">TDX Portal</a>.
+            </p>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 0.75rem;">
+              <sl-input 
+                label="Client ID / 帳號" 
+                placeholder="e.g. your-client-id" 
+                .value="${this._draftTdxClientId || ''}" 
+                @sl-input=${(e) => this._draftTdxClientId = e.target.value}
+                style="--sl-input-background-color: var(--fids-surface-2, #242b35); --sl-input-border-color: var(--fids-separator, rgba(255, 255, 255, 0.09)); --sl-input-color: #fff; --sl-input-label-color: var(--fids-dim);"
+              ></sl-input>
+              <sl-input 
+                label="Client Secret / 密碼" 
+                type="password" 
+                password-toggle 
+                placeholder="e.g. your-client-secret" 
+                .value="${this._draftTdxClientSecret || ''}" 
+                @sl-input=${(e) => this._draftTdxClientSecret = e.target.value}
+                style="--sl-input-background-color: var(--fids-surface-2, #242b35); --sl-input-border-color: var(--fids-separator, rgba(255, 255, 255, 0.09)); --sl-input-color: #fff; --sl-input-label-color: var(--fids-dim);"
+              ></sl-input>
+            </div>
+          </div>
+
         </div>
 
         <sl-button slot="footer" variant="default" @click=${this._handleCancel}>
@@ -218,6 +252,13 @@ export class FlightSettingsDialog extends LitElement {
   }
 
   _handleConfirm() {
+    localStorage.setItem('openfids_tdx_client_id', this._draftTdxClientId || '');
+    localStorage.setItem('openfids_tdx_client_secret', this._draftTdxClientSecret || '');
+
+    // Invalidate cached token when credentials change
+    localStorage.removeItem('openfids_tdx_access_token');
+    localStorage.removeItem('openfids_tdx_token_expiry');
+
     this.dispatchEvent(new CustomEvent('confirm-settings', {
       detail: {
         airportCode: this._draftAirportCode,
@@ -236,11 +277,15 @@ export class FlightSettingsDialog extends LitElement {
     const key = e.target.value;
     this._draftAirportCode = key.toUpperCase();
     
-    // Auto fallback for domestic if not supported by new airport
+    // Auto fallback for domestic / international if not supported by new airport
     const config = airports[key];
     const hasDomestic = !!(config && config.apiEndpoints && config.apiEndpoints.dom_D && config.apiEndpoints.dom_A);
+    const hasIntl = !!(config && config.apiEndpoints && (config.apiEndpoints.intl_D || config.apiEndpoints.intl_A));
+
     if (!hasDomestic && this._draftRouteType === 'dom') {
       this._draftRouteType = 'intl';
+    } else if (!hasIntl && this._draftRouteType === 'intl') {
+      this._draftRouteType = 'dom';
     }
   }
 

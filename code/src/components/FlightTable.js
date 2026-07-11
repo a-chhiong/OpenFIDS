@@ -100,6 +100,36 @@ export class FlightTable extends LitElement {
 
     flight-table-row { display: contents; }
 
+    .airline-logo-wrapper {
+      background-color: #ffffff;
+      padding: 2px;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      width: calc(var(--fids-logo-height, 1.4em) + 6px);
+      height: calc(var(--fids-logo-height, 1.4em) + 6px);
+      overflow: hidden;
+    }
+
+    .airline-logo-wrapper img {
+      width: 100% !important;
+      height: 100% !important;
+      max-width: 100% !important;
+      max-height: 100% !important;
+      object-fit: contain !important;
+      border-radius: 2px;
+      display: block;
+    }
+
+    :host-context(.light-theme) .airline-logo-wrapper {
+      background-color: transparent;
+      padding: 0;
+      border-radius: 0;
+      width: var(--fids-logo-height, 1.4em);
+      height: var(--fids-logo-height, 1.4em);
+    }
 
 
     .refreshing-row { animation: row-flash 0.5s ease-in-out; }
@@ -116,6 +146,7 @@ export class FlightTable extends LitElement {
       background: rgba(255,255,255,0.18);
       border-radius: 2px;
     }
+
   `;
 
   constructor() {

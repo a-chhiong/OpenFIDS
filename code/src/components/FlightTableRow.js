@@ -107,12 +107,14 @@ export class FlightTableRow extends LitElement {
         <td class="fids-cell" style=${cellStyles}>
           <div style="display:flex; align-items:center; height:100%;">
             ${logoUrl ? html`
-              <img 
-                src="${logoUrl}" 
-                alt="${f.airlineCode}" 
-                @error="${(e) => e.target.style.display = 'none'}"
-                style="height: var(--fids-logo-height, 1.6em); width: auto; max-width: 2.8em; object-fit: contain; border-radius: 2px;"
-              />
+              <div class="airline-logo-wrapper">
+                <img 
+                  src="${logoUrl}" 
+                  alt="${f.airlineCode}" 
+                  @error="${(e) => e.target.closest('.airline-logo-wrapper').style.display = 'none'}"
+                  style="height: var(--fids-logo-height, 1.6em); width: auto; max-width: 2.8em; object-fit: contain; border-radius: 2px;"
+                />
+              </div>
             ` : ''}
           </div>
         </td>

@@ -169,6 +169,7 @@ export class FlightViewModel {
     window.addEventListener('hashchange', this._handleHashChange);
     window.addEventListener('resize', this._handleResize);
     document.addEventListener('visibilitychange', this._handleVisibilityChange);
+    window.addEventListener('tdx-rate-limited', this._handleTdxRateLimited);
   }
 
   hostDisconnected() {
@@ -178,10 +179,15 @@ export class FlightViewModel {
     window.removeEventListener('hashchange', this._handleHashChange);
     window.removeEventListener('resize', this._handleResize);
     document.removeEventListener('visibilitychange', this._handleVisibilityChange);
+    window.removeEventListener('tdx-rate-limited', this._handleTdxRateLimited);
   }
 
   _handleHashChange = () => this._syncRoute();
   _handleResize = () => this.host?.requestUpdate();
+  _handleTdxRateLimited = () => {
+    this.error = "TDX API Access Limited (401/429). Enter your TDX Client ID and Client Secret in Settings to configure authorization, or wait for guest window reset.";
+    this.host?.requestUpdate();
+  };
 
   _handleVisibilityChange = () => {
     if (document.visibilityState === 'hidden') {
@@ -212,6 +218,9 @@ export class FlightViewModel {
     this.nextRefreshIn = 60;
 
     try {
+      if (typeof this.provider.ensureMapLoaded === 'function') {
+        await this.provider.ensureMapLoaded();
+      }
       this.flights = await this.provider.fetchFlights(this.routeType, this.viewType);
       this.lastUpdated = new Date();
     } catch (err) {
