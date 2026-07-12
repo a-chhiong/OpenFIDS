@@ -15,7 +15,7 @@ const TAIWAN_AIRPORTS = {
   'MFK': { zh: '馬祖北竿', en: 'Matsu Beigan' },
   'CYI': { zh: '嘉義', en: 'Chiayi' },
   'HCN': { zh: '恆春', en: 'Hengchun' },
-  'GDO': { zh: '綠島', en: 'Green Island' },
+  'GNI': { zh: '綠島', en: 'Green Island' },
   'KYD': { zh: '蘭嶼', en: 'Lanyu' },
   'CMJ': { zh: '七美', en: 'Qimei' },
   'WOT': { zh: '望安', en: 'Wang-an' }
@@ -39,7 +39,8 @@ const AIRLINES = {
   'VJ': { zh: '越捷航空', en: 'VietJet Air' },
   'VN': { zh: '越南航空', en: 'Vietnam Airlines' },
   'FD': { zh: '泰國亞航', en: 'Thai AirAsia' },
-  'AK': { zh: '亞洲航空', en: 'AirAsia' }
+  'AK': { zh: '亞洲航空', en: 'AirAsia' },
+  'DA': { zh: '德安航空', en: 'Daily Air' },
 };
 
 function getAirportName(code, lang) {
