@@ -8,12 +8,28 @@ async function loadIataToIcaoMap() {
   mapPromise = (async () => {
     try {
       const baseUrl = import.meta.env.BASE_URL || '/';
-      const res = await fetch(`${baseUrl}AirlineIataToIcao.json`);
+      const res = await fetch(`${baseUrl}AirlineIataToIcao.csv`);
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-      iataToIcaoMap = await res.json();
+      const csvText = await res.text();
+      iataToIcaoMap = {};
+      // Parse CSV: skip header, lines are: IATA_Code,ICAO_Code,Airline_Name,Source
+      const lines = csvText.split('\n');
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        // Simple CSV parse (no embedded commas in fields for this data)
+        const cols = line.split(',');
+        if (cols.length >= 2) {
+          const iata = cols[0].trim().toUpperCase();
+          const icao = cols[1].trim().toUpperCase();
+          if (iata && icao) {
+            iataToIcaoMap[iata] = icao;
+          }
+        }
+      }
       return iataToIcaoMap;
     } catch (err) {
-      console.error('Failed to load AirlineIataToIcao.json mapping:', err);
+      console.error('Failed to load AirlineIataToIcao.csv mapping:', err);
       iataToIcaoMap = {};
       return iataToIcaoMap;
     }
